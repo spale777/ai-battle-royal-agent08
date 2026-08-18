@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Particle Life — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Emergent life from simple rules. Particles attract and repel each other, creating mesmerizing organic patterns.">
+  <meta property="og:title" content="Particle Life — agent-08 Digital Art Lab">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a0f; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+
+    .pl-layout {
+      display: flex; height: 100vh; padding-top: 56px;
+    }
+    .pl-canvas-wrap {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0a0f;
+    }
+    .pl-canvas-wrap canvas { display: block; cursor: crosshair; }
+
+    .pl-sidebar {
+      width: 300px; min-width: 300px;
+      background: #0f0f18;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto; padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .pl-sidebar h2 {
+      font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;
+      color: #7eb8ff; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .pl-sidebar h3 {
+      font-size: 0.85rem; font-weight: 600; color: #aaa;
+      margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    .control-group { margin-bottom: 0.5rem; }
+    .control-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;
+    }
+    .control-label .val { color: #7eb8ff; font-weight: 600; font-size: 0.75rem; }
+
+    input[type="range"] {
+      width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+      background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer;
+      box-shadow: 0 0 8px rgba(126,184,255,0.4);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer; border: none;
+    }
+
+    .preset-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+    }
+    .preset-btn {
+      padding: 0.4rem 0.5rem; font-size: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #bbb; border-radius: 6px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .preset-btn:hover {
+      background: rgba(126,184,255,0.1);
+      border-color: rgba(126,184,255,0.3);
+      color: #7eb8ff;
+    }
+
+    .btn {
+      padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4a7fff, #7e57c2);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(74, 127, 255, 0.3);
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: #aaa; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      color: #e0e0e8;
+    }
+    .btn-row { display: flex; gap: 0.5rem; }
+    .btn-row .btn { flex: 1; }
+
+    /* Force matrix grid */
+    .force-matrix {
+      display: grid;
+      gap: 2px;
+      margin-bottom: 0.5rem;
+    }
+    .force-cell {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 600; border-radius: 4px;
+      min-height: 28px; cursor: pointer; transition: all 0.15s;
+      user-select: none;
+    }
+    .force-cell:hover { transform: scale(1.1); z-index: 1; }
+    .force-header {
+      font-size: 0.6rem; color: #666; text-align: center;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Type visibility toggles */
+    .type-row {
+      display: flex; gap: 0.4rem; flex-wrap: wrap;
+    }
+    .type-toggle {
+      width: 32px; height: 32px; border-radius: 6px;
+      border: 2px solid rgba(255,255,255,0.1);
+      cursor: pointer; transition: all 0.2s;
+      position: relative;
+    }
+    .type-toggle.hidden {
+      opacity: 0.3;
+    }
+    .type-toggle.hidden::after {
+      content: '×'; position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 1.2rem; font-weight: 700;
+    }
+    .type-toggle:hover { border-color: rgba(255,255,255,0.3); }
+
+    .stats-bar {
+      font-size: 0.75rem; color: #555; text-align: center;
+      padding: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06);
+      margin-top: auto;
+    }
+
+    .hint-text {
+      font-size: 0.7rem; color: #555; text-align: center;
+      padding: 0.2rem 0; line-height: 1.4;
+    }
+
+    @media (max-width: 768px) {
+      .pl-layout { flex-direction: column; }
+      .pl-sidebar { width: 100%; min-width: 0; height: auto; max-height: 300px; border-left: none; border-top: 1px solid rgba(255,255,255,0.06); }
+      .pl-canvas-wrap { height: 55vh; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous">Lissajous</a>
+        <a href="/spirograph">Spirograph</a>
+        <a href="/particle-life" class="active">Life</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="pl-layout">
+    <div class="pl-canvas-wrap">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="pl-sidebar">
+      <h2>⬡ Particle Life</h2>
+
+      <div>
+        <h3>Presets</h3>
+        <div class="preset-grid">
+          <button class="preset-btn" data-preset="primordial">Primordial</button>
+          <button class="preset-btn" data-preset="ecosystem">Ecosystem</button>
+          <button class="preset-btn" data-preset="war">Turf War</button>
+          <button class="preset-btn" data-preset="symbiosis">Symbiosis</button>
+          <button class="preset-btn" data-preset="chaos">Chaos</button>
+          <button class="preset-btn" data-preset="crystal">Crystal</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>Types</h3>
+        <div class="type-row" id="type-row"></div>
+      </div>
+
+      <div>
+        <h3>Force Matrix</h3>
+        <p class="hint-text">Click cells to cycle: attract → neutral → repel</p>
+        <div id="force-matrix"></div>
+      </div>
+
+      <div>
+        <h3>Parameters</h3>
+        <div class="control-group">
+          <div class="control-label"><span>Particles per type</span><span class="val" id="val-count">120</span></div>
+          <input type="range" id="ctrl-count" min="30" max="400" step="10" value="120">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Interaction radius</span><span class="val" id="val-radius">60</span></div>
+          <input type="range" id="ctrl-radius" min="20" max="150" step="5" value="60">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Force strength</span><span class="val" id="val-strength">0.4</span></div>
+          <input type="range" id="ctrl-strength" min="0.05" max="1.5" step="0.05" value="0.4">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Friction</span><span class="val" id="val-friction">0.85</span></div>
+          <input type="range" id="ctrl-friction" min="0.5" max="0.98" step="0.01" value="0.85">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Particle size</span><span class="val" id="val-size">4</span></div>
+          <input type="range" id="ctrl-size" min="2" max="10" step="0.5" value="4">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Glow intensity</span><span class="val" id="val-glow">0.6</span></div>
+          <input type="range" id="ctrl-glow" min="0" max="1" step="0.05" value="0.6">
+        </div>
+      </div>
+
+      <div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-reset">⟳ Reset</button>
+          <button class="btn btn-secondary" id="btn-pause">⏸ Pause</button>
+        </div>
+        <div class="btn-row" style="margin-top:0.5rem">
+          <button class="btn btn-secondary" id="btn-snapshot">📷 Snapshot</button>
+        </div>
+      </div>
+
+      <div class="stats-bar" id="stats-bar">Initializing…</div>
+    </div>
+  </div>
+
+  <script>
+  // ===== Particle Life Simulation =====
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  // Particle types and their colors
+  const TYPE_COLORS = [
+    { r: 255, g: 80,  b: 80,  name: 'Red' },
+    { r: 80,  g: 200, b: 255, name: 'Cyan' },
+    { r: 255, g: 220, b: 50,  name: 'Yellow' },
+    { r: 130, g: 255, b: 100, name: 'Green' },
+    { r: 200, g: 120, b: 255, name: 'Purple' },
+  ];
+  const NUM_TYPES = TYPE_COLORS.length;
+
+  // State
+  let particles = [];
+  let paused = false;
+  let frameCount = 0;
+  let fps = 0;
+  let lastFpsTime = performance.now();
+
+  // Parameters
+  let params = {
+    count: 120,
+    radius: 60,
+    strength: 0.4,
+    friction: 0.85,
+    size: 4,
+    glow: 0.6,
+  };
+
+  // Force matrix: forceMatrix[i][j] = force type i exerts on type j
+  // +1 = attract, 0 = neutral, -1 = repel
+  let forceMatrix = [];
+
+  // Type visibility
+  let typeVisible = [true, true, true, true, true];
+
+  function initForceMatrix() {
+    forceMatrix = [];
+    for (let i = 0; i < NUM_TYPES; i++) {
+      forceMatrix[i] = [];
+      for (let j = 0; j < NUM_TYPES; j++) {
+        forceMatrix[i][j] = 0;
+      }
+    }
+  }
+
+  // Presets
+  const presets = {
+    primordial: {
+      matrix: [
+        [ 0,  1, -1,  0,  0],
+        [-1,  0,  1, -1,  0],
+        [ 0, -1,  0,  1, -1],
+        [ 0,  0, -1,  0,  1],
+        [ 1,  0,  0, -1,  0],
+      ],
+      count: 120, radius: 60, strength: 0.4, friction: 0.85, size: 4, glow: 0.6,
+    },
+    ecosystem: {
+      matrix: [
+        [ 0, -1,  1,  0,  0],
+        [ 1,  0, -1,  0,  0],
+        [-1,  1,  0,  1, -1],
+        [ 0,  0, -1,  0,  1],
+        [ 0,  0,  1, -1,  0],
+      ],
+      count: 150, radius: 50, strength: 0.35, friction: 0.88, size: 3.5, glow: 0.5,
+    },
+    war: {
+      matrix: [
+        [ 0, -1, -1,  1,  0],
+        [-1,  0, -1,  0,  1],
+        [-1, -1,  0,  1,  0],
+        [ 1,  0,  1,  0, -1],
+        [ 0,  1,  0, -1,  0],
+      ],
+      count: 100, radius: 70, strength: 0.6, friction: 0.82, size: 4.5, glow: 0.7,
+    },
+    symbiosis: {
+      matrix: [
+        [ 0,  1,  1,  0,  0],
+        [ 1,  0,  0,  1,  0],
+        [ 1,  0,  0,  0,  1],
+        [ 0,  1,  0,  0,  1],
+        [ 0,  0,  1,  1,  0],
+      ],
+      count: 120, radius: 55, strength: 0.3, friction: 0.9, size: 4, glow: 0.6,
+    },
+    chaos: {
+      matrix: [
+        [ 0, -1,  1, -1,  1],
+        [ 1,  0, -1,  1, -1],
+        [-1,  1,  0, -1,  1],
+        [ 1, -1,  1,  0, -1],
+        [-1,  1, -1,  1,  0],
+      ],
+      count: 100, radius: 80, strength: 0.8, friction: 0.8, size: 5, glow: 0.8,
+    },
+    crystal: {
+      matrix: [
+        [ 0,  0,  1, -1,  0],
+        [ 0,  0, -1,  0,  1],
+        [ 1, -1,  0,  0,  0],
+        [-1,  0,  0,  0,  1],
+        [ 0,  1,  0,  1,  0],
+      ],
+      count: 200, radius: 40, strength: 0.5, friction: 0.92, size: 3, glow: 0.4,
+    },
+  };
+
+  // ===== Canvas setup =====
+  function resize() {
+    const wrap = canvas.parentElement;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = wrap.clientWidth * dpr;
+    canvas.height = wrap.clientHeight * dpr;
+    canvas.style.width = wrap.clientWidth + 'px';
+    canvas.style.height = wrap.clientHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // ===== Particle creation =====
+  function createParticles() {
+    particles = [];
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    for (let t = 0; t < NUM_TYPES; t++) {
+      if (!typeVisible[t]) continue;
+      for (let i = 0; i < params.count; i++) {
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: 0,
+          vy: 0,
+          type: t,
+        });
+      }
+    }
+  }
+
+  // ===== Simulation step =====
+  function step() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const r = params.radius;
+    const r2 = r * r;
+    const str = params.strength;
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      let fx = 0, fy = 0;
+
+      for (let j = 0; j < particles.length; j++) {
+        if (i === j) continue;
+        const q = particles[j];
+
+        const dx = q.x - p.x;
+        const dy = q.y - p.y;
+        const d2 = dx * dx + dy * dy;
+
+        if (d2 < r2 && d2 > 1) {
+          const d = Math.sqrt(d2);
+          const force = forceMatrix[p.type][q.type];
+          // Smooth force falloff: strong near, weak far, zero at boundary
+          const proximity = 1 - d / r;
+          const f = force * str * proximity * proximity;
+
+          fx += (dx / d) * f;
+          fy += (dy / d) * f;
+        }
+      }
+
+      p.vx = (p.vx + fx) * params.friction;
+      p.vy = (p.vy + fy) * params.friction;
+
+      // Speed limit
+      const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      const maxSpeed = 4;
+      if (speed > maxSpeed) {
+        p.vx = (p.vx / speed) * maxSpeed;
+        p.vy = (p.vy / speed) * maxSpeed;
+      }
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Wrap around edges
+      if (p.x < 0) p.x += w;
+      else if (p.x > w) p.x -= w;
+      if (p.y < 0) p.y += h;
+      else if (p.y > h) p.y -= h;
+    }
+  }
+
+  // ===== Rendering =====
+  function render() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+
+    // Clear with slight trail for motion blur
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.3)';
+    ctx.fillRect(0, 0, w, h);
+
+    const glowIntensity = params.glow;
+    const sz = params.size;
+
+    // Draw glow layer first
+    if (glowIntensity > 0) {
+      ctx.globalCompositeOperation = 'lighter';
+      for (const p of particles) {
+        const c = TYPE_COLORS[p.type];
+        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, sz * 4);
+        gradient.addColorStop(0, `rgba(${c.r},${c.g},${c.b},${0.15 * glowIntensity})`);
+        gradient.addColorStop(1, `rgba(${c.r},${c.g},${c.b},0)`);
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, sz * 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // Draw particles
+    for (const p of particles) {
+      const c = TYPE_COLORS[p.type];
+      const alpha = 0.7 + 0.3 * Math.min(1, Math.sqrt(p.vx * p.vx + p.vy * p.vy) / 2);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, sz, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${alpha})`;
+      ctx.fill();
+    }
+  }
+
+  // ===== Animation loop =====
+  function animate() {
+    if (!paused) {
+      step();
+    }
+    render();
+
+    frameCount++;
+    const now = performance.now();
+    if (now - lastFpsTime > 1000) {
+      fps = Math.round(frameCount * 1000 / (now - lastFpsTime));
+      frameCount = 0;
+      lastFpsTime = now;
+      document.getElementById('stats-bar').textContent =
+        `Particles: ${particles.length} · FPS: ${fps} · ${paused ? '⏸ Paused' : '▶ Running'}`;
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  // ===== Force matrix UI =====
+  function buildForceMatrixUI() {
+    const container = document.getElementById('force-matrix');
+    container.innerHTML = '';
+    const cols = NUM_TYPES + 1;
+    container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+    // Header row
+    const empty = document.createElement('div');
+    empty.className = 'force-header';
+    container.appendChild(empty);
+    for (let j = 0; j < NUM_TYPES; j++) {
+      const h = document.createElement('div');
+      h.className = 'force-header';
+      h.textContent = ['R','C','Y','G','P'][j];
+      h.style.color = `rgb(${TYPE_COLORS[j].r},${TYPE_COLORS[j].g},${TYPE_COLORS[j].b})`;
+      container.appendChild(h);
+    }
+
+    // Data rows
+    for (let i = 0; i < NUM_TYPES; i++) {
+      const rh = document.createElement('div');
+      rh.className = 'force-header';
+      rh.textContent = ['R','C','Y','G','P'][i];
+      rh.style.color = `rgb(${TYPE_COLORS[i].r},${TYPE_COLORS[i].g},${TYPE_COLORS[i].b})`;
+      container.appendChild(rh);
+
+      for (let j = 0; j < NUM_TYPES; j++) {
+        const cell = document.createElement('div');
+        cell.className = 'force-cell';
+        cell.dataset.row = i;
+        cell.dataset.col = j;
+        updateForceCell(cell);
+        cell.addEventListener('click', () => {
+          // Cycle: 1 → 0 → -1 → 1
+          forceMatrix[i][j] = forceMatrix[i][j] === 1 ? 0 : forceMatrix[i][j] === 0 ? -1 : 1;
+          updateForceCell(cell);
+        });
+        container.appendChild(cell);
+      }
+    }
+  }
+
+  function updateForceCell(cell) {
+    const i = parseInt(cell.dataset.row);
+    const j = parseInt(cell.dataset.col);
+    const val = forceMatrix[i][j];
+    const c = TYPE_COLORS[i];
+
+    if (val === 1) {
+      cell.style.background = `rgba(${c.r},${c.g},${c.b},0.35)`;
+      cell.style.color = '#fff';
+      cell.textContent = '+';
+    } else if (val === -1) {
+      cell.style.background = `rgba(255,80,80,0.25)`;
+      cell.style.color = '#ff8888';
+      cell.textContent = '−';
+    } else {
+      cell.style.background = 'rgba(255,255,255,0.03)';
+      cell.style.color = '#444';
+      cell.textContent = '·';
+    }
+  }
+
+  // ===== Type visibility UI =====
+  function buildTypeToggles() {
+    const row = document.getElementById('type-row');
+    row.innerHTML = '';
+    for (let t = 0; t < NUM_TYPES; t++) {
+      const toggle = document.createElement('div');
+      toggle.className = 'type-toggle' + (typeVisible[t] ? '' : ' hidden');
+      toggle.style.background = `rgb(${TYPE_COLORS[t].r},${TYPE_COLORS[t].g},${TYPE_COLORS[t].b})`;
+      toggle.title = TYPE_COLORS[t].name;
+      toggle.addEventListener('click', () => {
+        typeVisible[t] = !typeVisible[t];
+        toggle.classList.toggle('hidden');
+      });
+      row.appendChild(toggle);
+    }
+  }
+
+  // ===== Apply preset =====
+  function applyPreset(name) {
+    const p = presets[name];
+    if (!p) return;
+
+    // Copy matrix
+    for (let i = 0; i < NUM_TYPES; i++) {
+      for (let j = 0; j < NUM_TYPES; j++) {
+        forceMatrix[i][j] = p.matrix[i][j];
+      }
+    }
+
+    // Update params
+    params.count = p.count;
+    params.radius = p.radius;
+    params.strength = p.strength;
+    params.friction = p.friction;
+    params.size = p.size;
+    params.glow = p.glow;
+
+    // Update UI sliders
+    document.getElementById('ctrl-count').value = p.count;
+    document.getElementById('val-count').textContent = p.count;
+    document.getElementById('ctrl-radius').value = p.radius;
+    document.getElementById('val-radius').textContent = p.radius;
+    document.getElementById('ctrl-strength').value = p.strength;
+    document.getElementById('val-strength').textContent = p.strength;
+    document.getElementById('ctrl-friction').value = p.friction;
+    document.getElementById('val-friction').textContent = p.friction;
+    document.getElementById('ctrl-size').value = p.size;
+    document.getElementById('val-size').textContent = p.size;
+    document.getElementById('ctrl-glow').value = p.glow;
+    document.getElementById('val-glow').textContent = p.glow;
+
+    // Rebuild UI and restart
+    buildForceMatrixUI();
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+    createParticles();
+  }
+
+  // ===== Controls =====
+  function bindSlider(id, param) {
+    const el = document.getElementById('ctrl-' + id);
+    const val = document.getElementById('val-' + id);
+    el.addEventListener('input', () => {
+      params[param] = parseFloat(el.value);
+      val.textContent = el.value;
+      if (param === 'count') createParticles();
+    });
+  }
+
+  bindSlider('count', 'count');
+  bindSlider('radius', 'radius');
+  bindSlider('strength', 'strength');
+  bindSlider('friction', 'friction');
+  bindSlider('size', 'size');
+  bindSlider('glow', 'glow');
+
+  // Preset buttons
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+  });
+
+  // Reset
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+    createParticles();
+  });
+
+  // Pause
+  document.getElementById('btn-pause').addEventListener('click', () => {
+    paused = !paused;
+    document.getElementById('btn-pause').textContent = paused ? '▶ Play' : '⏸ Pause';
+  });
+
+  // Snapshot
+  document.getElementById('btn-snapshot').addEventListener('click', () => {
+    // Render one clean frame
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+
+    const sz = params.size;
+    ctx.globalCompositeOperation = 'lighter';
+    for (const p of particles) {
+      const c = TYPE_COLORS[p.type];
+      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, sz * 4);
+      gradient.addColorStop(0, `rgba(${c.r},${c.g},${c.b},${0.15 * params.glow})`);
+      gradient.addColorStop(1, `rgba(${c.r},${c.g},${c.b},0)`);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, sz * 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+
+    for (const p of particles) {
+      const c = TYPE_COLORS[p.type];
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, sz, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},0.9)`;
+      ctx.fill();
+    }
+
+    // Download
+    const link = document.createElement('a');
+    link.download = `particle-life-${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  // ===== Init =====
+  initForceMatrix();
+  buildForceMatrixUI();
+  buildTypeToggles();
+
+  // Apply default preset
+  applyPreset('primordial');
+
+  window.addEventListener('resize', () => { resize(); createParticles(); });
+  resize();
+  animate();
+  </script>
+</body>
+</html>

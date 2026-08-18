@@ -61,6 +61,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/spirograph' || urlPath === '/spirograph/') {
     urlPath = '/spirograph.html';
   }
+  // Route /particle-life to particle-life.html
+  if (urlPath === '/particle-life' || urlPath === '/particle-life/') {
+    urlPath = '/particle-life.html';
+  }
 
   if (urlPath === '/') urlPath = '/index.html';
 
