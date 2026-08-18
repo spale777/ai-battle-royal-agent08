@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spirograph — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Interactive spirograph curve generator. Mathematical art through hypotrochoid and epitrochoid parametric curves.">
+  <meta property="og:title" content="Spirograph — agent-08 Digital Art Lab">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a0f; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+
+    .lab-layout {
+      display: flex; height: 100vh; padding-top: 56px;
+    }
+    .lab-canvas-wrap {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0a0f;
+    }
+    .lab-canvas-wrap canvas { display: block; max-width: 100%; max-height: 100%; }
+
+    .lab-sidebar {
+      width: 300px; min-width: 300px;
+      background: #0f0f18;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto; padding: 1.25rem;
+      color: #ccc; font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+    }
+    .lab-sidebar h3 {
+      color: #fff; font-size: 1rem; margin: 0 0 0.75rem;
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .control-group {
+      margin-bottom: 0.75rem;
+    }
+    .control-group label {
+      display: flex; justify-content: space-between;
+      margin-bottom: 0.25rem; color: #999;
+    }
+    .control-group label span { color: #ddd; font-weight: 500; }
+    .control-group input[type="range"] {
+      width: 100%; height: 4px; -webkit-appearance: none;
+      background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+    }
+    .control-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: #7c6aef; cursor: pointer;
+      border: 2px solid #0f0f18;
+    }
+    .control-group input[type="color"] {
+      width: 36px; height: 24px; border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px; background: none; cursor: pointer; padding: 0;
+    }
+    .color-row {
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .color-row label { margin-bottom: 0; flex: 1; }
+
+    .btn-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+    .btn {
+      padding: 0.5rem 0.75rem; border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px; background: rgba(255,255,255,0.05);
+      color: #ddd; cursor: pointer; font-size: 0.75rem;
+      font-family: inherit; transition: all 0.15s;
+    }
+    .btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+    .btn.active { background: rgba(124,106,239,0.3); border-color: #7c6aef; color: #fff; }
+
+    .preset-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+    .preset-btn {
+      padding: 0.4rem; border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 4px; background: rgba(255,255,255,0.03);
+      color: #aaa; cursor: pointer; font-size: 0.7rem;
+      font-family: inherit; text-align: center; transition: all 0.15s;
+    }
+    .preset-btn:hover { background: rgba(124,106,239,0.15); color: #ddd; }
+
+    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 0.75rem 0; }
+
+    .info-line {
+      font-size: 0.7rem; color: #666; margin-top: 0.5rem;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous">Lissajous</a>
+        <a href="/spirograph" class="active">Spirograph</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="lab-layout">
+    <div class="lab-canvas-wrap">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="lab-sidebar">
+      <h3>◇ Spirograph</h3>
+
+      <div class="control-group">
+        <label>Outer Radius <span id="vOuter">200</span></label>
+        <input type="range" id="outerR" min="50" max="300" value="200" step="1">
+      </div>
+      <div class="control-group">
+        <label>Inner Radius <span id="vInner">80</span></label>
+        <input type="range" id="innerR" min="10" max="200" value="80" step="1">
+      </div>
+      <div class="control-group">
+        <label>Pen Offset <span id="vPen">60</span></label>
+        <input type="range" id="penOffset" min="5" max="200" value="60" step="1">
+      </div>
+
+      <hr class="divider">
+
+      <div class="control-group">
+        <label>Speed <span id="vSpeed">1.0</span></label>
+        <input type="range" id="speed" min="0.1" max="5" value="1" step="0.1">
+      </div>
+      <div class="control-group">
+        <label>Line Width <span id="vWidth">1.5</span></label>
+        <input type="range" id="lineWidth" min="0.5" max="5" value="1.5" step="0.1">
+      </div>
+      <div class="control-group">
+        <label>Trail Opacity <span id="vOpacity">0.85</span></label>
+        <input type="range" id="trailOpacity" min="0.05" max="1" value="0.85" step="0.05">
+      </div>
+      <div class="control-group">
+        <label>Color Cycles <span id="vCycles">1</span></label>
+        <input type="range" id="colorCycles" min="0" max="10" value="1" step="1">
+      </div>
+
+      <hr class="divider">
+
+      <div class="color-row">
+        <label>Line Color</label>
+        <input type="color" id="lineColor" value="#7c6aef">
+      </div>
+      <div class="color-row" style="margin-top:0.4rem;">
+        <label>Background</label>
+        <input type="color" id="bgColor" value="#0a0a0f">
+      </div>
+
+      <hr class="divider">
+
+      <div class="control-group">
+        <label>Type</label>
+        <div class="btn-row">
+          <button class="btn active" data-type="hypotrochoid">Hypotrochoid</button>
+          <button class="btn" data-type="epitrochoid">Epitrochoid</button>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <h3>Presets</h3>
+      <div class="preset-grid">
+        <button class="preset-btn" data-preset="classic">Classic Star</button>
+        <button class="preset-btn" data-preset="flower">Flower</button>
+        <button class="preset-btn" data-preset="mandala">Mandala</button>
+        <button class="preset-btn" data-preset="knot">Knot</button>
+        <button class="preset-btn" data-preset="galaxy">Galaxy</button>
+        <button class="preset-btn" data-preset="chaos">Chaos</button>
+        <button class="preset-btn" data-preset="snowflake">Snowflake</button>
+        <button class="preset-btn" data-preset="atom">Atom</button>
+      </div>
+
+      <hr class="divider">
+
+      <div class="btn-row">
+        <button class="btn" id="btnPlay">▶ Draw</button>
+        <button class="btn" id="btnReset">↺ Reset</button>
+        <button class="btn" id="btnExport">⤓ PNG</button>
+      </div>
+
+      <div class="info-line" id="infoLine">
+        Hypotrochoid: a curve traced by a point attached to a circle rolling inside a fixed circle.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Controls
+    const els = {
+      outerR: document.getElementById('outerR'),
+      innerR: document.getElementById('innerR'),
+      penOffset: document.getElementById('penOffset'),
+      speed: document.getElementById('speed'),
+      lineWidth: document.getElementById('lineWidth'),
+      trailOpacity: document.getElementById('trailOpacity'),
+      colorCycles: document.getElementById('colorCycles'),
+      lineColor: document.getElementById('lineColor'),
+      bgColor: document.getElementById('bgColor'),
+    };
+
+    const vEls = {
+      outerR: document.getElementById('vOuter'),
+      innerR: document.getElementById('vInner'),
+      penOffset: document.getElementById('vPen'),
+      speed: document.getElementById('vSpeed'),
+      lineWidth: document.getElementById('vWidth'),
+      trailOpacity: document.getElementById('vOpacity'),
+      colorCycles: document.getElementById('vCycles'),
+    };
+
+    let curveType = 'hypotrochoid';
+    let running = false;
+    let animId = null;
+    let t = 0;
+    let totalT = 0;
+    let hueOffset = 0;
+
+    const PRESETS = {
+      classic: { outerR: 200, innerR: 80, penOffset: 60, lineWidth: 1.5, colorCycles: 1, type: 'hypotrochoid' },
+      flower: { outerR: 200, innerR: 120, penOffset: 110, lineWidth: 1.2, colorCycles: 3, type: 'hypotrochoid' },
+      mandala: { outerR: 220, innerR: 60, penOffset: 55, lineWidth: 1, colorCycles: 5, type: 'hypotrochoid' },
+      knot: { outerR: 180, innerR: 130, penOffset: 100, lineWidth: 1.5, colorCycles: 2, type: 'epitrochoid' },
+      galaxy: { outerR: 250, innerR: 100, penOffset: 90, lineWidth: 0.8, colorCycles: 8, type: 'hypotrochoid' },
+      chaos: { outerR: 200, innerR: 97, penOffset: 85, lineWidth: 0.6, colorCycles: 10, type: 'hypotrochoid' },
+      snowflake: { outerR: 200, innerR: 133, penOffset: 120, lineWidth: 1, colorCycles: 4, type: 'hypotrochoid' },
+      atom: { outerR: 180, innerR: 60, penOffset: 150, lineWidth: 1.2, colorCycles: 3, type: 'epitrochoid' },
+    };
+
+    function resize() {
+      const wrap = canvas.parentElement;
+      const size = Math.min(wrap.clientWidth, wrap.clientHeight) - 40;
+      canvas.width = size * devicePixelRatio;
+      canvas.height = size * devicePixelRatio;
+      canvas.style.width = size + 'px';
+      canvas.style.height = size + 'px';
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    }
+
+    function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+    function getParams() {
+      return {
+        R: +els.outerR.value,
+        r: +els.innerR.value,
+        d: +els.penOffset.value,
+        speed: +els.speed.value,
+        lineWidth: +els.lineWidth.value,
+        trailOpacity: +els.trailOpacity.value,
+        colorCycles: +els.colorCycles.value,
+        lineColor: els.lineColor.value,
+        bgColor: els.bgColor.value,
+      };
+    }
+
+    function computePoint(R, r, d, theta, type) {
+      const k = R / r;
+      if (type === 'hypotrochoid') {
+        return {
+          x: (R - r) * Math.cos(theta) + d * Math.cos((R - r) / r * theta),
+          y: (R - r) * Math.sin(theta) - d * Math.sin((R - r) / r * theta),
+        };
+      } else {
+        return {
+          x: (R + r) * Math.cos(theta) - d * Math.cos((R + r) / r * theta),
+          y: (R + r) * Math.sin(theta) - d * Math.sin((R + r) / r * theta),
+        };
+      }
+    }
+
+    function getRepeatAngle(R, r, type) {
+      const g = gcd(R, r);
+      if (type === 'hypotrochoid') {
+        return (2 * Math.PI * r) / g;
+      } else {
+        return (2 * Math.PI * r) / g;
+      }
+    }
+
+    function hexToRgb(hex) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return [r, g, b];
+    }
+
+    function hslToRgb(h, s, l) {
+      h = ((h % 360) + 360) % 360;
+      s /= 100; l /= 100;
+      const c = (1 - Math.abs(2 * l - 1)) * s;
+      const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+      const m = l - c / 2;
+      let r, g, b;
+      if (h < 60) { r = c; g = x; b = 0; }
+      else if (h < 120) { r = x; g = c; b = 0; }
+      else if (h < 180) { r = 0; g = c; b = x; }
+      else if (h < 240) { r = 0; g = x; b = c; }
+      else if (h < 300) { r = x; g = 0; b = c; }
+      else { r = c; g = 0; b = x; }
+      return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+    }
+
+    function drawSpirograph() {
+      const p = getParams();
+      const w = canvas.width / devicePixelRatio;
+      const h = canvas.height / devicePixelRatio;
+      const cx = w / 2;
+      const cy = h / 2;
+      const maxR = p.R + p.d + 20;
+      const scale = Math.min(w, h) / (2 * maxR);
+
+      // Clear
+      ctx.fillStyle = p.bgColor;
+      ctx.fillRect(0, 0, w, h);
+
+      // Draw faint outer and inner circles for reference
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, p.R * scale, 0, Math.PI * 2);
+      ctx.stroke();
+
+      if (t > 0) {
+        const repeatAngle = getRepeatAngle(p.R, p.r, curveType);
+        const maxT = Math.min(t, repeatAngle);
+        const steps = Math.max(Math.floor(maxT * 200), 1);
+        const dt = maxT / steps;
+
+        const [cr, cg, cb] = hexToRgb(p.lineColor);
+
+        ctx.lineWidth = p.lineWidth;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Draw curve with optional color cycling
+        if (p.colorCycles > 0) {
+          const segCount = Math.max(Math.floor(steps / 4), 1);
+          const totalSegs = Math.ceil(steps / segCount);
+          for (let seg = 0; seg < totalSegs; seg++) {
+            const start = seg * segCount;
+            const end = Math.min(start + segCount + 1, steps);
+            if (start >= steps) break;
+
+            const hue = (hueOffset + (seg / totalSegs) * 360 * p.colorCycles) % 360;
+            const [sr, sg, sb] = hslToRgb(hue, 70, 65);
+            ctx.strokeStyle = `rgba(${sr},${sg},${sb},${p.trailOpacity})`;
+            ctx.beginPath();
+            for (let i = start; i <= end && i <= steps; i++) {
+              const theta = i * dt;
+              const pt = computePoint(p.R, p.r, p.d, theta, curveType);
+              const sx = cx + pt.x * scale;
+              const sy = cy + pt.y * scale;
+              if (i === start) ctx.moveTo(sx, sy);
+              else ctx.lineTo(sx, sy);
+            }
+            ctx.stroke();
+          }
+        } else {
+          ctx.strokeStyle = `rgba(${cr},${cg},${cb},${p.trailOpacity})`;
+          ctx.beginPath();
+          for (let i = 0; i <= steps; i++) {
+            const theta = i * dt;
+            const pt = computePoint(p.R, p.r, p.d, theta, curveType);
+            const sx = cx + pt.x * scale;
+            const sy = cy + pt.y * scale;
+            if (i === 0) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
+          }
+          ctx.stroke();
+        }
+
+        // Draw pen dot
+        const pt = computePoint(p.R, p.r, p.d, t, curveType);
+        ctx.fillStyle = p.lineColor;
+        ctx.beginPath();
+        ctx.arc(cx + pt.x * scale, cy + pt.y * scale, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Update info
+        const progress = Math.min(t / repeatAngle * 100, 100).toFixed(1);
+        document.getElementById('infoLine').textContent =
+          `Progress: ${progress}% · t = ${t.toFixed(2)} · repeat ≈ ${(repeatAngle / (2 * Math.PI)).toFixed(2)} turns`;
+      } else {
+        document.getElementById('infoLine').textContent =
+          `${curveType === 'hypotrochoid' ? 'Hypotrochoid' : 'Epitrochoid'}: a curve traced by a point on a circle rolling ${curveType === 'hypotrochoid' ? 'inside' : 'outside'} a fixed circle.`;
+      }
+    }
+
+    function animate() {
+      if (!running) return;
+      const p = getParams();
+      const repeatAngle = getRepeatAngle(p.R, p.r, curveType);
+      t += 0.02 * p.speed;
+      hueOffset += 0.3 * p.speed;
+
+      if (t >= repeatAngle * 1.02) {
+        running = false;
+        document.getElementById('btnPlay').textContent = '▶ Draw';
+        document.getElementById('btnPlay').classList.remove('active');
+      }
+
+      drawSpirograph();
+      if (running) animId = requestAnimationFrame(animate);
+    }
+
+    function startDrawing() {
+      if (running) {
+        running = false;
+        document.getElementById('btnPlay').textContent = '▶ Draw';
+        document.getElementById('btnPlay').classList.remove('active');
+        return;
+      }
+      running = true;
+      document.getElementById('btnPlay').textContent = '⏸ Pause';
+      document.getElementById('btnPlay').classList.add('active');
+      animate();
+    }
+
+    function reset() {
+      running = false;
+      t = 0;
+      hueOffset = 0;
+      document.getElementById('btnPlay').textContent = '▶ Draw';
+      document.getElementById('btnPlay').classList.remove('active');
+      if (animId) cancelAnimationFrame(animId);
+      drawSpirograph();
+    }
+
+    // Event listeners
+    Object.keys(els).forEach(key => {
+      if (els[key].type === 'range') {
+        els[key].addEventListener('input', () => {
+          vEls[key].textContent = els[key].value;
+          if (!running) {
+            t = 0;
+            hueOffset = 0;
+            drawSpirograph();
+          }
+        });
+      } else if (els[key].type === 'color') {
+        els[key].addEventListener('input', () => {
+          if (!running) {
+            t = 0;
+            drawSpirograph();
+          }
+        });
+      }
+    });
+
+    document.querySelectorAll('[data-type]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        curveType = btn.dataset.type;
+        reset();
+      });
+    });
+
+    document.querySelectorAll('[data-preset]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const preset = PRESETS[btn.dataset.preset];
+        if (!preset) return;
+        els.outerR.value = preset.outerR; vEls.outerR.textContent = preset.outerR;
+        els.innerR.value = preset.innerR; vEls.innerR.textContent = preset.innerR;
+        els.penOffset.value = preset.penOffset; vEls.penOffset.textContent = preset.penOffset;
+        els.lineWidth.value = preset.lineWidth; vEls.lineWidth.textContent = preset.lineWidth;
+        els.colorCycles.value = preset.colorCycles; vEls.colorCycles.textContent = preset.colorCycles;
+
+        curveType = preset.type;
+        document.querySelectorAll('[data-type]').forEach(b => {
+          b.classList.toggle('active', b.dataset.type === curveType);
+        });
+        reset();
+      });
+    });
+
+    document.getElementById('btnPlay').addEventListener('click', startDrawing);
+    document.getElementById('btnReset').addEventListener('click', reset);
+    document.getElementById('btnExport').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = `spirograph-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+
+    window.addEventListener('resize', () => { resize(); if (!running) drawSpirograph(); });
+    resize();
+    drawSpirograph();
+  </script>
+</body>
+</html>
