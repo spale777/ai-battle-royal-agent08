@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fractal Explorer — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Interactive fractal explorer. Zoom into Mandelbrot and Julia sets with real-time rendering.">
+  <meta property="og:title" content="Fractal Explorer — agent-08 Digital Art Lab">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a0f; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+
+    .frac-layout {
+      display: flex; height: 100vh; padding-top: 56px;
+    }
+    .frac-canvas-wrap {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0a0f;
+    }
+    .frac-canvas-wrap canvas {
+      display: block; cursor: crosshair;
+    }
+
+    .frac-sidebar {
+      width: 300px; min-width: 300px;
+      background: #0f0f18;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto; padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .frac-sidebar h2 {
+      font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;
+      color: #7eb8ff; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .frac-sidebar h3 {
+      font-size: 0.85rem; font-weight: 600; color: #aaa;
+      margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    .control-group { margin-bottom: 0.5rem; }
+    .control-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;
+    }
+    .control-label .val { color: #7eb8ff; font-weight: 600; font-size: 0.75rem; }
+
+    input[type="range"] {
+      width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+      background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer;
+      box-shadow: 0 0 8px rgba(126,184,255,0.4);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer; border: none;
+    }
+
+    .btn {
+      padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4a7fff, #7e57c2);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(74, 127, 255, 0.3);
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: #aaa; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      color: #e0e0e8;
+    }
+    .btn-row { display: flex; gap: 0.5rem; }
+    .btn-row .btn { flex: 1; }
+
+    .type-toggle {
+      display: flex; gap: 0.5rem; margin-bottom: 0.75rem;
+    }
+    .type-btn {
+      flex: 1; padding: 0.45rem; font-size: 0.8rem; font-weight: 600;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #888; border-radius: 6px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit; text-align: center;
+    }
+    .type-btn.active {
+      background: rgba(126,184,255,0.15);
+      border-color: rgba(126,184,255,0.4);
+      color: #7eb8ff;
+    }
+    .type-btn:hover:not(.active) {
+      background: rgba(255,255,255,0.08);
+      color: #bbb;
+    }
+
+    .preset-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+    }
+    .preset-btn {
+      padding: 0.4rem 0.5rem; font-size: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #bbb; border-radius: 6px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .preset-btn:hover {
+      background: rgba(126,184,255,0.1);
+      border-color: rgba(126,184,255,0.3);
+      color: #7eb8ff;
+    }
+
+    .color-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .color-swatch {
+      width: 28px; height: 28px; border-radius: 6px; border: 2px solid rgba(255,255,255,0.1);
+      cursor: pointer; transition: border-color 0.2s;
+    }
+    .color-swatch:hover, .color-swatch.active { border-color: #7eb8ff; }
+
+    .stats-bar {
+      font-size: 0.75rem; color: #555; text-align: center;
+      padding: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06);
+      margin-top: auto;
+    }
+
+    .coord-display {
+      font-size: 0.75rem; color: #666; font-family: monospace;
+      text-align: center; padding: 0.3rem;
+      background: rgba(255,255,255,0.02); border-radius: 4px;
+      overflow: hidden; white-space: nowrap;
+    }
+
+    .zoom-hint {
+      font-size: 0.7rem; color: #555; text-align: center;
+      padding: 0.3rem 0;
+    }
+
+    @media (max-width: 768px) {
+      .frac-layout { flex-direction: column; }
+      .frac-sidebar { width: 100%; min-width: 0; height: auto; max-height: 280px; border-left: none; border-top: 1px solid rgba(255,255,255,0.06); }
+      .frac-canvas-wrap { height: 55vh; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal" class="active">Fractal</a>
+        <a href="/reaction">Reaction</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="frac-layout">
+    <div class="frac-canvas-wrap">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="frac-sidebar">
+      <h2>⬡ Fractal Explorer</h2>
+
+      <div>
+        <h3>Type</h3>
+        <div class="type-toggle">
+          <button class="type-btn active" data-type="mandelbrot">Mandelbrot</button>
+          <button class="type-btn" data-type="julia">Julia</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>Presets</h3>
+        <div class="preset-grid">
+          <button class="preset-btn" data-preset="classic">Classic</button>
+          <button class="preset-btn" data-preset="seahorse">Seahorse</button>
+          <button class="preset-btn" data-preset="lightning">Lightning</button>
+          <button class="preset-btn" data-preset="galaxy">Galaxy</button>
+          <button class="preset-btn" data-preset="snowflake">Snowflake</button>
+          <button class="preset-btn" data-preset="spiral">Spiral</button>
+          <button class="preset-btn" data-preset="antenna">Antenna</button>
+          <button class="preset-btn" data-preset="valley">Valley</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>Parameters</h3>
+        <div class="control-group">
+          <div class="control-label"><span>Max iterations</span><span class="val" id="val-iter">200</span></div>
+          <input type="range" id="ctrl-iter" min="50" max="1000" step="50" value="200">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Julia Real (c)</span><span class="val" id="val-jr">-0.7</span></div>
+          <input type="range" id="ctrl-jr" min="-2" max="2" step="0.01" value="-0.7">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Julia Imag (c)</span><span class="val" id="val-ji">0.27015</span></div>
+          <input type="range" id="ctrl-ji" min="-2" max="2" step="0.01" value="0.27015">
+        </div>
+      </div>
+
+      <div>
+        <h3>Color</h3>
+        <div class="color-row" id="color-row">
+          <div class="color-swatch active" data-color="classic" style="background: linear-gradient(135deg, #000, #11f)" title="Classic"></div>
+          <div class="color-swatch" data-color="ocean" style="background: linear-gradient(135deg, #003, #0af)" title="Ocean"></div>
+          <div class="color-swatch" data-color="fire" style="background: linear-gradient(135deg, #f40, #fa0)" title="Fire"></div>
+          <div class="color-swatch" data-color="neon" style="background: linear-gradient(135deg, #f0f, #0ff)" title="Neon"></div>
+          <div class="color-swatch" data-color="forest" style="background: linear-gradient(135deg, #040, #8c2)" title="Forest"></div>
+          <div class="color-swatch" data-color="ice" style="background: linear-gradient(135deg, #008, #cdf)" title="Ice"></div>
+          <div class="color-swatch" data-color="sunset" style="background: linear-gradient(135deg, #f04, #fa4)" title="Sunset"></div>
+          <div class="color-swatch" data-color="void" style="background: linear-gradient(135deg, #40f, #f4a)" title="Void"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-reset">⟳ Reset View</button>
+          <button class="btn btn-secondary" id="btn-zoom-in">Zoom In</button>
+        </div>
+      </div>
+
+      <div class="zoom-hint">Click to zoom in · Shift+click to zoom out · Drag to pan</div>
+
+      <div class="coord-display" id="coord-display">x: 0.0000 · y: 0.0000 · zoom: 1.0×</div>
+
+      <div class="stats-bar" id="stats-bar">Rendering…</div>
+    </div>
+  </div>
+
+  <script>
+  // ===== Fractal Explorer =====
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const NUM_WORKERS = navigator.hardwareConcurrency || 4;
+
+  // State
+  let fractalType = 'mandelbrot';
+  let center = { x: -0.5, y: 0 };
+  let zoom = 1.0;
+  let maxIter = 200;
+  let juliaC = { x: -0.7, y: 0.27015 };
+  let colorScheme = 'classic';
+  let rendering = false;
+  let needsRender = true;
+  let workers = [];
+  let startTime = 0;
+
+  // Color schemes as HSL-based functions
+  const colorSchemes = {
+    classic: (iter, maxIter) => {
+      if (iter === maxIter) return [0, 0, 0];
+      const t = iter / maxIter;
+      const h = (t * 360 + 200) % 360;
+      const s = 80 + 20 * t;
+      const l = 10 + 60 * t;
+      return hslToRgb(h, s, l);
+    },
+    ocean: (iter, maxIter) => {
+      if (iter === maxIter) return [0, 0, 0];
+      const t = iter / maxIter;
+      const h = (t * 120 + 180) % 360;
+      const s = 70 + 30 * t;
+      const l = 5 + 50 * t;
+      return hslToRgb(h, s, l);
+    },
+    fire: (iter, maxIter) => {
+      if (iter === maxIter) return [0, 0, 0];
+      const t = iter / maxIter;
+      const h = (t * 40 + 0) % 360;
+      const s = 90 + 10 * t;
+      const l = 5 + 55 * t;
+      return hslToRgb(h, s, l);
+    },
+    neon: (iter, maxIter) => {
+      if (iter === maxIter) return [0, 0, 0];
+      const t = iter / maxIter;
+      const h = (t * 360 + 150) % 360;
+      const s = 100;
+      const l = 20 + 50 * t;
+      return hslToRgb(h, s, l);
+    },
+    forest: (iter, maxIter) => {
+      if (iter === maxIter) return [0, 0, 0];
+      const t = iter / maxIter;
+      const h = (t * 60 + 80) % 360;
+      const s = 60 + 30 * t;
+      const l = 5 + 45 * t;
+      return hslToRgb(h, s, l);
+    },
+    ice: (iter, maxIter) => {
+      if (iter === maxIter) return [0, 0, 0];
+      const t = iter / maxIter;
+      const h = (t * 40 + 190) % 360;
+      const s = 50 + 40 * t;
+      const l = 10 + 65 * t;
+      return hslToRgb(h, s, l);
+    },
+    sunset: (iter, maxIter) => {
+      if (iter === maxIter) return [0, 0, 0];
+      const t = iter / maxIter;
+      const h = (t * 60 + 300) % 360;
+      const s = 85 + 15 * t;
+      const l = 8 + 50 * t;
+      return hslToRgb(h, s, l);
+    },
+    void: (iter, maxIter) => {
+      if (iter === maxIter) return [0, 0, 0];
+      const t = iter / maxIter;
+      const h = (t * 360 + 270) % 360;
+      const s = 90;
+      const l = 5 + 40 * t;
+      return hslToRgb(h, s, l);
+    },
+  };
+
+  function hslToRgb(h, s, l) {
+    s /= 100; l /= 100;
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+    const m = l - c / 2;
+    let r, g, b;
+    if (h < 60) { r = c; g = x; b = 0; }
+    else if (h < 120) { r = x; g = c; b = 0; }
+    else if (h < 180) { r = 0; g = c; b = x; }
+    else if (h < 240) { r = 0; g = x; b = c; }
+    else if (h < 300) { r = x; g = 0; b = c; }
+    else { r = c; g = 0; b = x; }
+    return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+  }
+
+  // Resize
+  function resize() {
+    const wrap = canvas.parentElement;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = wrap.clientWidth * dpr;
+    canvas.height = wrap.clientHeight * dpr;
+    canvas.style.width = wrap.clientWidth + 'px';
+    canvas.style.height = wrap.clientHeight + 'px';
+    needsRender = true;
+  }
+
+  // Compute fractal via Web Workers (split by rows)
+  function render() {
+    if (rendering) return;
+    rendering = true;
+    startTime = performance.now();
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const aspect = w / h;
+    const scale = 2.0 / zoom;
+    const xMin = center.x - scale * aspect / 2;
+    const yMin = center.y - scale / 2;
+    const dx = scale * aspect / w;
+    const dy = scale / h;
+
+    const pixelData = ctx.createImageData(w, h);
+    const data = pixelData.data;
+    const chunkSize = Math.ceil(h / NUM_WORKERS);
+    let completed = 0;
+
+    for (let i = 0; i < NUM_WORKERS; i++) {
+      const startRow = i * chunkSize;
+      const endRow = Math.min(startRow + chunkSize, h);
+      if (startRow >= h) continue;
+
+      // Use inline computation (no web workers for simplicity)
+      for (let py = startRow; py < endRow; py++) {
+        for (let px = 0; px < w; px++) {
+          const cx = xMin + px * dx;
+          const cy = yMin + py * dy;
+
+          let iter;
+          if (fractalType === 'mandelbrot') {
+            iter = mandelbrot(cx, cy, maxIter);
+          } else {
+            iter = julia(cx, cy, juliaC.x, juliaC.y, maxIter);
+          }
+
+          const colorFn = colorSchemes[colorScheme];
+          const [r, g, b] = colorFn(iter, maxIter);
+          const idx = (py * w + px) * 4;
+          data[idx] = r;
+          data[idx + 1] = g;
+          data[idx + 2] = b;
+          data[idx + 3] = 255;
+        }
+      }
+    }
+
+    ctx.putImageData(pixelData, 0, 0);
+    const elapsed = performance.now() - startTime;
+    const fps = (1000 / elapsed).toFixed(1);
+    document.getElementById('stats-bar').textContent =
+      `${fractalType === 'mandelbrot' ? 'Mandelbrot' : 'Julia'} · ${w}×${h} · ${maxIter} iter · ${elapsed.toFixed(0)}ms · ~${fps} fps`;
+    rendering = false;
+    needsRender = false;
+    updateCoords();
+  }
+
+  function mandelbrot(cx, cy, maxIter) {
+    let zx = 0, zy = 0;
+    for (let i = 0; i < maxIter; i++) {
+      const zx2 = zx * zx - zy * zy + cx;
+      const zy2 = 2 * zx * zy + cy;
+      zx = zx2; zy = zy2;
+      if (zx * zx + zy * zy > 4) return i;
+    }
+    return maxIter;
+  }
+
+  function julia(cx, cy, jx, jy, maxIter) {
+    let zx = cx, zy = cy;
+    for (let i = 0; i < maxIter; i++) {
+      const zx2 = zx * zx - zy * zy + jx;
+      const zy2 = 2 * zx * zy + jy;
+      zx = zx2; zy = zy2;
+      if (zx * zx + zy * zy > 4) return i;
+    }
+    return maxIter;
+  }
+
+  function updateCoords() {
+    const scale = 2.0 / zoom;
+    document.getElementById('coord-display').textContent =
+      `x: ${center.x.toFixed(6)} · y: ${center.y.toFixed(6)} · zoom: ${zoom.toFixed(2)}×`;
+  }
+
+  // Zoom to point
+  function zoomToPoint(cx, cy, factor) {
+    // Convert pixel coords to fractal coords
+    const w = canvas.width;
+    const h = canvas.height;
+    const aspect = w / h;
+    const scale = 2.0 / zoom;
+    const fx = center.x - scale * aspect / 2 + cx / w * scale * aspect;
+    const fy = center.y - scale / 2 + cy / h * scale;
+
+    center.x = fx;
+    center.y = fy;
+    zoom *= factor;
+    needsRender = true;
+    requestRender();
+  }
+
+  let renderTimer = null;
+  function requestRender() {
+    if (renderTimer) cancelAnimationFrame(renderTimer);
+    renderTimer = setTimeout(() => { if (needsRender) render(); }, 100);
+  }
+
+  // Mouse interaction
+  let isDragging = false;
+  let dragStart = null;
+  let dragCenter = null;
+
+  canvas.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    dragStart = { x: e.clientX, y: e.clientY };
+    dragCenter = { x: center.x, y: center.y };
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (isDragging && dragStart) {
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+      const rect = canvas.getBoundingClientRect();
+      const scale = 2.0 / zoom;
+      const aspect = rect.width / rect.height;
+      center.x = dragCenter.x - dx / rect.width * scale * aspect;
+      center.y = dragCenter.y - dy / rect.height * scale;
+      updateCoords();
+      requestRender();
+    }
+  });
+
+  canvas.addEventListener('mouseup', (e) => {
+    if (isDragging && dragStart) {
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+      if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
+        // It's a click — zoom in/out
+        const rect = canvas.getBoundingClientRect();
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+        const factor = e.shiftKey ? 0.5 : 2.0;
+        zoomToPoint(px * (canvas.width / rect.width), py * (canvas.height / rect.height), factor);
+      }
+    }
+    isDragging = false;
+    dragStart = null;
+    dragCenter = null;
+  });
+
+  // Touch support
+  let lastTouchDist = null;
+  let lastTouchCenter = null;
+
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      isDragging = true;
+      dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      dragCenter = { x: center.x, y: center.y };
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+      lastTouchCenter = { x: (e.touches[0].clientX + e.touches[1].clientX) / 2, y: (e.touches[0].clientY + e.touches[1].clientY) / 2 };
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && isDragging && dragStart) {
+      const dx = e.touches[0].clientX - dragStart.x;
+      const dy = e.touches[0].clientY - dragStart.y;
+      const rect = canvas.getBoundingClientRect();
+      const scale = 2.0 / zoom;
+      const aspect = rect.width / rect.height;
+      center.x = dragCenter.x - dx / rect.width * scale * aspect;
+      center.y = dragCenter.y - dy / rect.height * scale;
+      updateCoords();
+      requestRender();
+    } else if (e.touches.length === 2 && lastTouchDist) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const factor = dist / lastTouchDist;
+      zoom *= factor;
+      lastTouchDist = dist;
+      updateCoords();
+      requestRender();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', () => {
+    isDragging = false;
+    lastTouchDist = null;
+    lastTouchCenter = null;
+  });
+
+  // Scroll zoom
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const px = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const py = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    zoomToPoint(px, py, factor);
+  }, { passive: false });
+
+  // Controls
+  function bindSlider(id, setter) {
+    const el = document.getElementById('ctrl-' + id);
+    const val = document.getElementById('val-' + id);
+    el.addEventListener('input', () => {
+      setter(parseFloat(el.value));
+      val.textContent = el.value;
+      needsRender = true;
+      requestRender();
+    });
+  }
+
+  bindSlider('iter', (v) => { maxIter = v; });
+  bindSlider('jr', (v) => { juliaC.x = v; });
+  bindSlider('ji', (v) => { juliaC.y = v; });
+
+  // Type toggle
+  document.querySelectorAll('.type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      fractalType = btn.dataset.type;
+      needsRender = true;
+      requestRender();
+    });
+  });
+
+  // Color swatches
+  document.querySelectorAll('.color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      swatch.classList.add('active');
+      colorScheme = swatch.dataset.color;
+      needsRender = true;
+      requestRender();
+    });
+  });
+
+  // Presets
+  const presets = {
+    classic: { x: -0.5, y: 0, zoom: 1, iter: 200, type: 'mandelbrot', color: 'classic' },
+    seahorse: { x: -0.7435669, y: 0.1314023, zoom: 2000, iter: 500, type: 'mandelbrot', color: 'ocean' },
+    lightning: { x: -0.1625, y: 1.02, zoom: 200, iter: 400, type: 'julia', color: 'neon', jx: -0.79, jy: 0.15 },
+    galaxy: { x: -0.75, y: 0.0, zoom: 100, iter: 300, type: 'julia', color: 'void', jx: -0.8, jy: 0.156 },
+    snowflake: { x: -0.745, y: 0.186, zoom: 500, iter: 400, type: 'julia', color: 'ice', jx: -0.745, jy: 0.186 },
+    spiral: { x: -0.761574, y: 0.0847596, zoom: 5000, iter: 600, type: 'mandelbrot', color: 'sunset' },
+    antenna: { x: -1.25066, y: 0.02012, zoom: 500, iter: 500, type: 'mandelbrot', color: 'fire' },
+    valley: { x: -0.235125, y: 0.827215, zoom: 1000, iter: 400, type: 'mandelbrot', color: 'forest' },
+  };
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = presets[btn.dataset.preset];
+      if (!p) return;
+      center.x = p.x; center.y = p.y; zoom = p.zoom; maxIter = p.iter;
+      if (p.type) {
+        fractalType = p.type;
+        document.querySelectorAll('.type-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.type === p.type);
+        });
+      }
+      if (p.color) {
+        colorScheme = p.color;
+        document.querySelectorAll('.color-swatch').forEach(s => {
+          s.classList.toggle('active', s.dataset.color === p.color);
+        });
+      }
+      if (p.jx !== undefined) juliaC.x = p.jx;
+      if (p.jy !== undefined) juliaC.y = p.jy;
+      // Update slider displays
+      document.getElementById('ctrl-iter').value = maxIter;
+      document.getElementById('val-iter').textContent = maxIter;
+      document.getElementById('ctrl-jr').value = juliaC.x;
+      document.getElementById('val-jr').textContent = juliaC.x;
+      document.getElementById('ctrl-ji').value = juliaC.y;
+      document.getElementById('val-ji').textContent = juliaC.y;
+      needsRender = true;
+      requestRender();
+    });
+  });
+
+  // Reset
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    center.x = -0.5; center.y = 0; zoom = 1; maxIter = 200;
+    document.getElementById('ctrl-iter').value = 200;
+    document.getElementById('val-iter').textContent = 200;
+    fractalType = 'mandelbrot';
+    document.querySelectorAll('.type-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.type === 'mandelbrot');
+    });
+    needsRender = true;
+    requestRender();
+  });
+
+  document.getElementById('btn-zoom-in').addEventListener('click', () => {
+    zoom *= 2;
+    needsRender = true;
+    requestRender();
+  });
+
+  // Update nav on other pages
+  window.addEventListener('resize', () => { resize(); needsRender = true; requestRender(); });
+  resize();
+  render();
+  </script>
+</body>
+</html>

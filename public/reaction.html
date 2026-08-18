@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reaction — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Interactive reaction-diffusion simulation. Gray-Scott model with real-time painting and parameter tuning.">
+  <meta property="og:title" content="Reaction — agent-08 Digital Art Lab">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a0f; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+
+    .rx-layout {
+      display: flex; height: 100vh; padding-top: 56px;
+    }
+    .rx-canvas-wrap {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0a0f;
+    }
+    .rx-canvas-wrap canvas {
+      display: block; cursor: crosshair;
+      image-rendering: pixelated;
+    }
+
+    .rx-sidebar {
+      width: 290px; min-width: 290px;
+      background: #0f0f18;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto; padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .rx-sidebar h2 {
+      font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;
+      color: #7eb8ff; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .rx-sidebar h3 {
+      font-size: 0.85rem; font-weight: 600; color: #aaa;
+      margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    .control-group { margin-bottom: 0.5rem; }
+    .control-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;
+    }
+    .control-label .val { color: #7eb8ff; font-weight: 600; font-size: 0.75rem; }
+
+    input[type="range"] {
+      width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+      background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer;
+      box-shadow: 0 0 8px rgba(126,184,255,0.4);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer; border: none;
+    }
+
+    .preset-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+    }
+    .preset-btn {
+      padding: 0.4rem 0.5rem; font-size: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #bbb; border-radius: 6px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .preset-btn:hover {
+      background: rgba(126,184,255,0.1);
+      border-color: rgba(126,184,255,0.3);
+      color: #7eb8ff;
+    }
+
+    .btn {
+      padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4a7fff, #7e57c2);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(74, 127, 255, 0.3);
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: #aaa; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      color: #e0e0e8;
+    }
+    .btn-row { display: flex; gap: 0.5rem; }
+    .btn-row .btn { flex: 1; }
+
+    .color-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .color-swatch {
+      width: 28px; height: 28px; border-radius: 6px; border: 2px solid rgba(255,255,255,0.1);
+      cursor: pointer; transition: border-color 0.2s;
+    }
+    .color-swatch:hover, .color-swatch.active { border-color: #7eb8ff; }
+
+    .stats-bar {
+      font-size: 0.75rem; color: #555; text-align: center;
+      padding: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06);
+      margin-top: auto;
+    }
+
+    .tool-row { display: flex; gap: 0.5rem; }
+    .tool-btn {
+      flex: 1; padding: 0.4rem 0.3rem; font-size: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #888; border-radius: 6px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit; text-align: center;
+    }
+    .tool-btn.active {
+      background: rgba(126,184,255,0.15);
+      border-color: rgba(126,184,255,0.4);
+      color: #7eb8ff;
+    }
+    .tool-btn:hover:not(.active) {
+      background: rgba(255,255,255,0.08);
+      color: #bbb;
+    }
+
+    .brush-info {
+      font-size: 0.75rem; color: #555; text-align: center;
+      padding: 0.2rem 0;
+    }
+
+    @media (max-width: 768px) {
+      .rx-layout { flex-direction: column; }
+      .rx-sidebar { width: 100%; min-width: 0; height: auto; max-height: 280px; border-left: none; border-top: 1px solid rgba(255,255,255,0.06); }
+      .rx-canvas-wrap { height: 55vh; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction" class="active">Reaction</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="rx-layout">
+    <div class="rx-canvas-wrap">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="rx-sidebar">
+      <h2>⬡ Reaction-Diffusion</h2>
+
+      <div>
+        <h3>Presets</h3>
+        <div class="preset-grid">
+          <button class="preset-btn" data-preset="coral">Coral</button>
+          <button class="preset-btn" data-preset="mitosis">Mitosis</button>
+          <button class="preset-btn" data-preset="fingerprint">Fingerprint</button>
+          <button class="preset-btn" data-preset="brain">Brain</button>
+          <button class="preset-btn" data-preset="worms">Worms</button>
+          <button class="preset-btn" data-preset="blobs">Blobs</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>Parameters</h3>
+        <div class="control-group">
+          <div class="control-label"><span>Feed rate (f)</span><span class="val" id="val-feed">0.055</span></div>
+          <input type="range" id="ctrl-feed" min="0.01" max="0.08" step="0.001" value="0.055">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Kill rate (k)</span><span class="val" id="val-kill">0.062</span></div>
+          <input type="range" id="ctrl-kill" min="0.03" max="0.07" step="0.001" value="0.062">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Diffusion U</span><span class="val" id="val-du">0.16</span></div>
+          <input type="range" id="ctrl-du" min="0.05" max="0.25" step="0.005" value="0.16">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Diffusion V</span><span class="val" id="val-dv">0.08</span></div>
+          <input type="range" id="ctrl-dv" min="0.01" max="0.15" step="0.005" value="0.08">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Steps/frame</span><span class="val" id="val-steps">8</span></div>
+          <input type="range" id="ctrl-steps" min="1" max="20" step="1" value="8">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Brush radius</span><span class="val" id="val-brush">6</span></div>
+          <input type="range" id="ctrl-brush" min="2" max="20" step="1" value="6">
+        </div>
+      </div>
+
+      <div>
+        <h3>Tool</h3>
+        <div class="tool-row" id="tool-row">
+          <button class="tool-btn active" data-tool="add">Add V</button>
+          <button class="tool-btn" data-tool="remove">Remove V</button>
+          <button class="tool-btn" data-tool="stir">Stir</button>
+        </div>
+        <div class="brush-info">Click/drag on canvas to paint</div>
+      </div>
+
+      <div>
+        <h3>Color</h3>
+        <div class="color-row" id="color-row">
+          <div class="color-swatch active" data-color="viridis" style="background: linear-gradient(135deg, #440154, #fde725)" title="Viridis"></div>
+          <div class="color-swatch" data-color="plasma" style="background: linear-gradient(135deg, #0d0887, #f0f921)" title="Plasma"></div>
+          <div class="color-swatch" data-color="inferno" style="background: linear-gradient(135deg, #000004, #fcffa4)" title="Inferno"></div>
+          <div class="color-swatch" data-color="ocean" style="background: linear-gradient(135deg, #002b5b, #00c9ff)" title="Ocean"></div>
+          <div class="color-swatch" data-color="fire" style="background: linear-gradient(135deg, #2b0000, #ff4400)" title="Fire"></div>
+          <div class="color-swatch" data-color="neon" style="background: linear-gradient(135deg, #ff00ff, #00ffff)" title="Neon"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-reset">⟳ Reset</button>
+          <button class="btn btn-secondary" id="btn-pause">⏸ Pause</button>
+        </div>
+        <div class="btn-row" style="margin-top:0.5rem">
+          <button class="btn btn-secondary" id="btn-snapshot">📷 Snapshot</button>
+        </div>
+      </div>
+
+      <div class="stats-bar" id="stats-bar">Initializing…</div>
+    </div>
+  </div>
+
+  <script>
+  // ===== Reaction-Diffusion Simulation (Gray-Scott Model) =====
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  // Simulation grid — lower res for performance, scaled up for display
+  const GRID_W = 256;
+  const GRID_H = 256;
+
+  // Double buffers for U and V
+  let u, v, uNext, vNext;
+  let paused = false;
+  let frameCount = 0;
+  let fps = 0;
+  let lastFpsTime = performance.now();
+  let tool = 'add';
+  let mouseDown = false;
+  let mousePos = { x: 0, y: 0 };
+  let prevMousePos = null;
+  let brushRadius = 6;
+  let colorScheme = 'viridis';
+
+  // Parameters
+  let params = {
+    f: 0.055,
+    k: 0.062,
+    du: 0.16,
+    dv: 0.08,
+    steps: 8,
+    brushRadius: 6
+  };
+
+  // Color schemes — maps [0..1] to RGB
+  const colorSchemes = {
+    viridis: (t) => {
+      t = Math.max(0, Math.min(1, t));
+      // Approximate viridis colormap
+      const r = Math.round(68 + t * 187);
+      const g = Math.round(1 + t * 230);
+      const b = Math.round(84 - t * 50);
+      return [clamp(r), clamp(g), clamp(b)];
+    },
+    plasma: (t) => {
+      t = Math.max(0, Math.min(1, t));
+      const r = Math.round(13 + t * 242);
+      const g = Math.round(8 + t * 195);
+      const b = Math.round(135 - t * 114);
+      return [clamp(r), clamp(g), clamp(b)];
+    },
+    inferno: (t) => {
+      t = Math.max(0, Math.min(1, t));
+      const r = Math.round(0 + t * 252);
+      const g = Math.round(0 + t * 255);
+      const b = Math.round(4 + t * 164);
+      return [clamp(r), clamp(g), clamp(b)];
+    },
+    ocean: (t) => {
+      t = Math.max(0, Math.min(1, t));
+      const r = Math.round(0 + t * 0);
+      const g = Math.round(43 + t * 154);
+      const b = Math.round(91 + t * 170);
+      return [clamp(r), clamp(g), clamp(b)];
+    },
+    fire: (t) => {
+      t = Math.max(0, Math.min(1, t));
+      const r = Math.round(43 + t * 212);
+      const g = Math.round(0 + t * 68);
+      const b = Math.round(0 + t * 0);
+      return [clamp(r), clamp(g), clamp(b)];
+    },
+    neon: (t) => {
+      t = Math.max(0, Math.min(1, t));
+      const r = Math.round(255 * Math.abs(Math.sin(t * 3.14159)));
+      const g = Math.round(255 * t);
+      const b = Math.round(255 * Math.cos(t * 3.14159 * 0.5));
+      return [clamp(r), clamp(g), clamp(b)];
+    },
+  };
+
+  function clamp(v) { return Math.max(0, Math.min(255, Math.round(v))); }
+
+  // Initialize simulation
+  function initGrid() {
+    u = new Float32Array(GRID_W * GRID_H);
+    v = new Float32Array(GRID_W * GRID_H);
+    uNext = new Float32Array(GRID_W * GRID_H);
+    vNext = new Float32Array(GRID_W * GRID_H);
+    // Fill U=1, V=0 everywhere
+    for (let i = 0; i < u.length; i++) { u[i] = 1.0; v[i] = 0.0; }
+    // Seed some V in random spots
+    for (let s = 0; s < 5; s++) {
+      const cx = Math.floor(Math.random() * GRID_W);
+      const cy = Math.floor(Math.random() * GRID_H);
+      const radius = 8 + Math.floor(Math.random() * 15);
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (dx * dx + dy * dy <= radius * radius) {
+            const x = (cx + dx + GRID_W) % GRID_W;
+            const y = (cy + dy + GRID_H) % GRID_H;
+            const idx = y * GRID_W + x;
+            v[idx] = 1.0;
+            u[idx] = 0.5;
+          }
+        }
+      }
+    }
+  }
+
+  // Gray-Scott step
+  function simulate() {
+    const f = params.f;
+    const k = params.k;
+    const du = params.du;
+    const dv = params.dv;
+    const w = GRID_W;
+    const h = GRID_H;
+
+    for (let i = 0; i < w * h; i++) {
+      const x = i % w;
+      const y = (i / w) | 0;
+      const xp = (x + 1) % w;
+      const xm = (x - 1 + w) % w;
+      const yp = (y + 1) % h;
+      const ym = (y - 1 + h) % h;
+
+      const uC = u[i];
+      const vC = v[i];
+
+      // Laplacian (5-point stencil)
+      const lapU = u[yp * w + x] + u[ym * w + x] + u[y * w + xp] + u[y * w + xm] - 4 * uC;
+      const lapV = v[yp * w + x] + v[ym * w + x] + v[y * w + xp] + v[y * w + xm] - 4 * vC;
+
+      const uvv = uC * vC * vC;
+
+      uNext[i] = uC + (du * lapU - uvv + f * (1 - uC)) * 0.2;
+      vNext[i] = vC + (dv * lapV + uvv - (f + k) * vC) * 0.2;
+    }
+
+    // Swap buffers
+    [u, uNext] = [uNext, u];
+    [v, vNext] = [vNext, v];
+  }
+
+  // Render to canvas (scaled)
+  function renderToCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const wrap = canvas.parentElement;
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.scale(dpr, dpr);
+
+    const imgData = ctx.createImageData(w, h);
+    const data = imgData.data;
+    const colorFn = colorSchemes[colorScheme];
+
+    for (let py = 0; py < h; py++) {
+      for (let px = 0; px < w; px++) {
+        const gx = Math.floor(px / w * GRID_W);
+        const gy = Math.floor(py / h * GRID_H);
+        const idx = gy * GRID_W + gx;
+        const val = v[idx]; // V concentration
+        const [r, g, b] = colorFn(val);
+        const pi = (py * w + px) * 4;
+        data[pi] = r;
+        data[pi + 1] = g;
+        data[pi + 2] = b;
+        data[pi + 3] = 255;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  // Paint into the simulation
+  function paintV(x, y, add) {
+    const cw = canvas.clientWidth || canvas.style.width.replace('px','');
+    const ch = canvas.clientHeight || canvas.style.height.replace('px','');
+    const gx = Math.floor(x / cw * GRID_W);
+    const gy = Math.floor(y / ch * GRID_H);
+    const r = brushRadius;
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (dx * dx + dy * dy <= r * r) {
+          const px = (gx + dx + GRID_W) % GRID_W;
+          const py = (gy + dy + GRID_H) % GRID_H;
+          const idx = py * GRID_W + px;
+          if (add) {
+            v[idx] = 1.0;
+            u[idx] = 0.5;
+          } else {
+            v[idx] = 0.0;
+            u[idx] = 1.0;
+          }
+        }
+      }
+    }
+  }
+
+  function stirV(x, y) {
+    const cw = canvas.clientWidth || canvas.style.width.replace('px','');
+    const ch = canvas.clientHeight || canvas.style.height.replace('px','');
+    const gx = Math.floor(x / cw * GRID_W);
+    const gy = Math.floor(y / ch * GRID_H);
+    const r = brushRadius;
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (dx * dx + dy * dy <= r * r) {
+          const px = (gx + dx + GRID_W) % GRID_W;
+          const py = (gy + dy + GRID_H) % GRID_H;
+          const idx = py * GRID_W + px;
+          // Swap nearby cells
+          const targetIdx = ((gy + dy + 2) % GRID_H) * GRID_W + ((gx + dx + 2) % GRID_W);
+          const tmpV = v[idx];
+          v[idx] = v[targetIdx];
+          v[targetIdx] = tmpV;
+        }
+      }
+    }
+  }
+
+  // Animation loop
+  function animate() {
+    if (!paused) {
+      for (let s = 0; s < params.steps; s++) {
+        simulate();
+      }
+    }
+    renderToCanvas();
+
+    frameCount++;
+    const now = performance.now();
+    if (now - lastFpsTime > 1000) {
+      fps = Math.round(frameCount * 1000 / (now - lastFpsTime));
+      frameCount = 0;
+      lastFpsTime = now;
+      document.getElementById('stats-bar').textContent =
+        `Grid: ${GRID_W}×${GRID_H} · Steps/frame: ${params.steps} · FPS: ${fps} · ${paused ? '⏸ Paused' : '▶ Running'}`;
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  // ===== Controls =====
+  function bindSlider(id, param) {
+    const el = document.getElementById('ctrl-' + id);
+    const val = document.getElementById('val-' + id);
+    el.addEventListener('input', () => {
+      params[param] = parseFloat(el.value);
+      val.textContent = el.value;
+      if (param === 'brushRadius') brushRadius = params[param];
+    });
+  }
+
+  bindSlider('feed', 'f');
+  bindSlider('kill', 'k');
+  bindSlider('du', 'du');
+  bindSlider('dv', 'dv');
+  bindSlider('steps', 'steps');
+  bindSlider('brush', 'brushRadius');
+
+  // Tool selection
+  document.querySelectorAll('.tool-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      tool = btn.dataset.tool;
+    });
+  });
+
+  // Color swatches
+  document.querySelectorAll('.color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      swatch.classList.add('active');
+      colorScheme = swatch.dataset.color;
+    });
+  });
+
+  // Presets
+  const presets = {
+    coral:       { f: 0.055, k: 0.062, du: 0.16, dv: 0.08, steps: 8, colorScheme: 'viridis' },
+    mitosis:     { f: 0.035, k: 0.065, du: 0.16, dv: 0.08, steps: 8, colorScheme: 'inferno' },
+    fingerprint: { f: 0.042, k: 0.060, du: 0.16, dv: 0.08, steps: 8, colorScheme: 'plasma' },
+    brain:       { f: 0.025, k: 0.055, du: 0.16, dv: 0.08, steps: 8, colorScheme: 'fire' },
+    worms:       { f: 0.060, k: 0.062, du: 0.16, dv: 0.08, steps: 8, colorScheme: 'ocean' },
+    blobs:       { f: 0.038, k: 0.060, du: 0.16, dv: 0.08, steps: 8, colorScheme: 'neon' },
+  };
+
+  function applyPreset(name) {
+    const p = presets[name];
+    if (!p) return;
+    params.f = p.f;
+    params.k = p.k;
+    params.du = p.du;
+    params.dv = p.dv;
+    params.steps = p.steps;
+    colorScheme = p.colorScheme;
+
+    document.getElementById('ctrl-feed').value = p.f;
+    document.getElementById('val-feed').textContent = p.f;
+    document.getElementById('ctrl-kill').value = p.k;
+    document.getElementById('val-kill').textContent = p.k;
+    document.getElementById('ctrl-du').value = p.du;
+    document.getElementById('val-du').textContent = p.du;
+    document.getElementById('ctrl-dv').value = p.dv;
+    document.getElementById('val-dv').textContent = p.dv;
+    document.getElementById('ctrl-steps').value = p.steps;
+    document.getElementById('val-steps').textContent = p.steps;
+
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    const target = document.querySelector(`.color-swatch[data-color="${p.colorScheme}"]`);
+    if (target) target.classList.add('active');
+
+    initGrid();
+  }
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+  });
+
+  // Reset & Pause
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    initGrid();
+  });
+  document.getElementById('btn-pause').addEventListener('click', () => {
+    paused = !paused;
+    document.getElementById('btn-pause').textContent = paused ? '▶ Resume' : '⏸ Pause';
+  });
+
+  // Snapshot — save canvas as PNG
+  document.getElementById('btn-snapshot').addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = `reaction-${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  // Mouse interaction
+  function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  }
+
+  canvas.addEventListener('mousedown', (e) => {
+    mouseDown = true;
+    const pos = getCanvasPos(e);
+    prevMousePos = pos;
+    if (tool === 'add') paintV(pos.x, pos.y, true);
+    else if (tool === 'remove') paintV(pos.x, pos.y, false);
+    else if (tool === 'stir') stirV(pos.x, pos.y);
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    const pos = getCanvasPos(e);
+    mousePos = pos;
+    if (mouseDown && prevMousePos) {
+      if (tool === 'add') paintV(pos.x, pos.y, true);
+      else if (tool === 'remove') paintV(pos.x, pos.y, false);
+      else if (tool === 'stir') stirV(pos.x, pos.y);
+    }
+    prevMousePos = pos;
+  });
+
+  canvas.addEventListener('mouseup', () => { mouseDown = false; prevMousePos = null; });
+  canvas.addEventListener('mouseleave', () => { mouseDown = false; prevMousePos = null; });
+
+  // Touch support
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    mouseDown = true;
+    const pos = getCanvasPos(e.touches[0]);
+    prevMousePos = pos;
+    if (tool === 'add') paintV(pos.x, pos.y, true);
+    else if (tool === 'remove') paintV(pos.x, pos.y, false);
+    else if (tool === 'stir') stirV(pos.x, pos.y);
+  });
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const pos = getCanvasPos(e.touches[0]);
+    if (mouseDown) {
+      if (tool === 'add') paintV(pos.x, pos.y, true);
+      else if (tool === 'remove') paintV(pos.x, pos.y, false);
+      else if (tool === 'stir') stirV(pos.x, pos.y);
+    }
+    prevMousePos = pos;
+  });
+  canvas.addEventListener('touchend', () => { mouseDown = false; prevMousePos = null; });
+
+  // ===== Init =====
+  initGrid();
+  window.addEventListener('resize', () => { renderToCanvas(); });
+  animate();
+  </script>
+</body>
+</html>

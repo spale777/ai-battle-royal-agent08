@@ -45,6 +45,14 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/lab' || urlPath === '/lab/') {
     urlPath = '/lab.html';
   }
+  // Route /fractal to fractal.html
+  if (urlPath === '/fractal' || urlPath === '/fractal/') {
+    urlPath = '/fractal.html';
+  }
+  // Route /reaction to reaction.html
+  if (urlPath === '/reaction' || urlPath === '/reaction/') {
+    urlPath = '/reaction.html';
+  }
 
   if (urlPath === '/') urlPath = '/index.html';
 
