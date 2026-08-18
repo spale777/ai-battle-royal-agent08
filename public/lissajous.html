@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lissajous — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Interactive Lissajous curve explorer. Parametric curves with real-time controls for frequency, phase, and color.">
+  <meta property="og:title" content="Lissajous — agent-08 Digital Art Lab">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a0f; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+
+    .lab-layout {
+      display: flex; height: 100vh; padding-top: 56px;
+    }
+    .lab-canvas-wrap {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0a0f;
+    }
+    .lab-canvas-wrap canvas { display: block; max-width: 100%; max-height: 100%; }
+
+    .lab-sidebar {
+      width: 280px; min-width: 280px;
+      background: #0f0f18;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto; padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .lab-sidebar h2 {
+      font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;
+      color: #7eb8ff; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .lab-sidebar h3 {
+      font-size: 0.85rem; font-weight: 600; color: #aaa;
+      margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    .control-group { margin-bottom: 0.5rem; }
+    .control-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;
+    }
+    .control-label .val { color: #7eb8ff; font-weight: 600; font-size: 0.75rem; }
+
+    input[type="range"] {
+      width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+      background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer;
+      box-shadow: 0 0 8px rgba(126,184,255,0.4);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer; border: none;
+    }
+
+    .preset-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+    }
+    .preset-btn {
+      padding: 0.4rem 0.5rem; font-size: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #bbb; border-radius: 6px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .preset-btn:hover {
+      background: rgba(126,184,255,0.1);
+      border-color: rgba(126,184,255,0.3);
+      color: #7eb8ff;
+    }
+
+    .btn {
+      padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4a7fff, #7e57c2);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(74, 127, 255, 0.3);
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: #aaa; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      color: #e0e0e8;
+    }
+    .btn-row { display: flex; gap: 0.5rem; }
+    .btn-row .btn { flex: 1; }
+
+    .color-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .color-swatch {
+      width: 28px; height: 28px; border-radius: 6px; border: 2px solid rgba(255,255,255,0.1);
+      cursor: pointer; transition: border-color 0.2s;
+    }
+    .color-swatch:hover, .color-swatch.active { border-color: #7eb8ff; }
+
+    .stats-bar {
+      font-size: 0.75rem; color: #555; text-align: center;
+      padding: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06);
+      margin-top: auto;
+    }
+
+    .info-text {
+      font-size: 0.78rem; color: #666; line-height: 1.5;
+      padding: 0.5rem 0; border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .toggle-row {
+      display: flex; gap: 0.5rem; align-items: center;
+    }
+    .toggle-btn {
+      padding: 0.3rem 0.6rem; font-size: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #888; border-radius: 4px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .toggle-btn.active {
+      background: rgba(126,184,255,0.15);
+      border-color: rgba(126,184,255,0.4);
+      color: #7eb8ff;
+    }
+
+    @media (max-width: 768px) {
+      .lab-layout { flex-direction: column; }
+      .lab-sidebar { width: 100%; min-width: 0; height: auto; max-height: 250px; border-left: none; border-top: 1px solid rgba(255,255,255,0.06); }
+      .lab-canvas-wrap { height: 60vh; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous" class="active">Lissajous</a>
+        <a href="/spirograph">Spirograph</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="lab-layout">
+    <div class="lab-canvas-wrap">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="lab-sidebar">
+      <h2>◎ Lissajous Curves</h2>
+
+      <div>
+        <h3>Presets</h3>
+        <div class="preset-grid">
+          <button class="preset-btn" data-preset="figure8">Figure 8</button>
+          <button class="preset-btn" data-preset="trefoil">Trefoil</button>
+          <button class="preset-btn" data-preset="cardioid">Cardioid</button>
+          <button class="preset-btn" data-preset="lissajous35">3:5</button>
+          <button class="preset-btn" data-preset="star">Star</button>
+          <button class="preset-btn" data-preset="lace">Lace</button>
+          <button class="preset-btn" data-preset="butterfly">Butterfly</button>
+          <button class="preset-btn" data-preset="pulsar">Pulsar</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>Parameters</h3>
+        <div class="control-group">
+          <div class="control-label"><span>Frequency A</span><span class="val" id="val-a">3</span></div>
+          <input type="range" id="ctrl-a" min="1" max="12" step="0.5" value="3">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Frequency B</span><span class="val" id="val-b">2</span></div>
+          <input type="range" id="ctrl-b" min="1" max="12" step="0.5" value="2">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Phase shift δ</span><span class="val" id="val-delta">π/2</span></div>
+          <input type="range" id="ctrl-delta" min="0" max="6.283" step="0.01" value="1.5708">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Speed</span><span class="val" id="val-speed">0.5</span></div>
+          <input type="range" id="ctrl-speed" min="0.05" max="3" step="0.05" value="0.5">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Trail length</span><span class="val" id="val-trail">0.015</span></div>
+          <input type="range" id="ctrl-trail" min="0.002" max="0.1" step="0.002" value="0.015">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Line width</span><span class="val" id="val-linewidth">2</span></div>
+          <input type="range" id="ctrl-linewidth" min="0.5" max="6" step="0.5" value="2">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Radius</span><span class="val" id="val-radius">0.85</span></div>
+          <input type="range" id="ctrl-radius" min="0.3" max="1" step="0.05" value="0.85">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Color shift</span><span class="val" id="val-hue">0</span></div>
+          <input type="range" id="ctrl-hue" min="0" max="360" step="5" value="0">
+        </div>
+      </div>
+
+      <div>
+        <h3>Color</h3>
+        <div class="color-row" id="color-row">
+          <div class="color-swatch active" data-color="spectrum" style="background: linear-gradient(135deg, #ff0066, #00ccff, #ff6600)" title="Spectrum"></div>
+          <div class="color-swatch" data-color="neon" style="background: linear-gradient(135deg, #ff00ff, #00ffff)" title="Neon"></div>
+          <div class="color-swatch" data-color="aurora" style="background: linear-gradient(135deg, #00ff88, #00aaff)" title="Aurora"></div>
+          <div class="color-swatch" data-color="sunset" style="background: linear-gradient(135deg, #ff4400, #ffaa00)" title="Sunset"></div>
+          <div class="color-swatch" data-color="monochrome" style="background: linear-gradient(135deg, #ffffff, #888888)" title="Monochrome"></div>
+          <div class="color-swatch" data-color="void" style="background: linear-gradient(135deg, #8844ff, #ff44aa)" title="Void"></div>
+        </div>
+      </div>
+
+      <div>
+        <h3>Mode</h3>
+        <div class="toggle-row">
+          <button class="toggle-btn active" data-mode="animate">Animate</button>
+          <button class="toggle-btn" data-mode="static">Static</button>
+          <button class="toggle-btn" data-mode="trace">Trace</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>Stroke</h3>
+        <div class="toggle-row">
+          <button class="toggle-btn active" data-stroke="glow">Glow</button>
+          <button class="toggle-btn" data-stroke="solid">Solid</button>
+          <button class="toggle-btn" data-stroke="dashed">Dashed</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-regenerate">⟳ Reset</button>
+          <button class="btn btn-secondary" id="btn-clear">Clear</button>
+        </div>
+      </div>
+
+      <div class="info-text">
+        Lissajous curves: x = A·sin(a·t + δ), y = B·sin(b·t). 
+        The ratio a:b determines the shape. δ controls the phase.
+      </div>
+
+      <div class="stats-bar" id="stats-bar">Frequency: 3:2 · FPS: 0</div>
+    </div>
+  </div>
+
+  <script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  const colorSchemes = {
+    spectrum: (t) => {
+      const h = (t * 360) % 360;
+      return `hsl(${h}, 100%, 65%)`;
+    },
+    neon: (t) => {
+      const h = (t * 180 + 180) % 360;
+      return `hsl(${h}, 100%, 70%)`;
+    },
+    aurora: (t) => {
+      const h = (t * 120 + 140) % 360;
+      return `hsl(${h}, 90%, 60%)`;
+    },
+    sunset: (t) => {
+      const h = (t * 60 + 10) % 60;
+      return `hsl(${h}, 100%, 55%)`;
+    },
+    monochrome: (t) => {
+      const l = 50 + Math.sin(t * Math.PI * 2) * 30;
+      return `hsl(0, 0%, ${l}%)`;
+    },
+    void: (t) => {
+      const h = (t * 270 + 270) % 360;
+      return `hsl(${h}, 80%, 65%)`;
+    }
+  };
+
+  let params = {
+    a: 3, b: 2, delta: Math.PI / 2,
+    speed: 0.5, trail: 0.015, lineWidth: 2, radius: 0.85,
+    hue: 0, colorScheme: 'spectrum',
+    mode: 'animate', stroke: 'glow'
+  };
+
+  let t = 0;
+  let fps = 0, frameCount = 0, lastFpsTime = performance.now();
+  let points = [];
+
+  function resize() {
+    const wrap = canvas.parentElement;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = wrap.clientWidth * dpr;
+    canvas.height = wrap.clientHeight * dpr;
+    canvas.style.width = wrap.clientWidth + 'px';
+    canvas.style.height = wrap.clientHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function getColor(tNorm) {
+    const hShift = params.hue;
+    const colorFn = colorSchemes[params.colorScheme];
+    // Apply hue shift by creating a wrapper
+    const orig = colorFn(tNorm);
+    if (hShift === 0) return orig;
+    // Parse hsl and shift
+    const match = orig.match(/hsl\((\d+\.?\d*),\s*(\d+)%,\s*(\d+)%\)/);
+    if (match) {
+      const h = (parseFloat(match[1]) + hShift) % 360;
+      return `hsl(${h}, ${match[2]}%, ${match[3]}%)`;
+    }
+    return orig;
+  }
+
+  function drawStaticCurve() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.min(w, h) / 2 * params.radius;
+    const { a, b, delta } = params;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw grid lines (subtle)
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 1.1, cy); ctx.lineTo(cx + r * 1.1, cy);
+    ctx.moveTo(cx, cy - r * 1.1); ctx.lineTo(cx, cy + r * 1.1);
+    ctx.stroke();
+
+    const steps = 4000;
+    const dt = (2 * Math.PI) / steps;
+
+    for (let i = 0; i < steps; i++) {
+      const t0 = i * dt;
+      const t1 = (i + 1) * dt;
+      const x0 = cx + r * Math.sin(a * t0 + delta);
+      const y0 = cy + r * Math.sin(b * t0);
+      const x1 = cx + r * Math.sin(a * t1 + delta);
+      const y1 = cy + r * Math.sin(b * t1);
+
+      const tNorm = i / steps;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+
+      if (params.stroke === 'glow') {
+        ctx.strokeStyle = getColor(tNorm);
+        ctx.lineWidth = params.lineWidth;
+        ctx.shadowColor = getColor(tNorm);
+        ctx.shadowBlur = 12;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      } else if (params.stroke === 'dashed') {
+        ctx.strokeStyle = getColor(tNorm);
+        ctx.lineWidth = params.lineWidth;
+        ctx.setLineDash([4, 6]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        ctx.strokeStyle = getColor(tNorm);
+        ctx.lineWidth = params.lineWidth;
+        ctx.stroke();
+      }
+    }
+  }
+
+  function animateTrace() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.min(w, h) / 2 * params.radius;
+    const { a, b, delta } = params;
+
+    // Fade old points
+    if (params.mode === 'animate') {
+      ctx.fillStyle = `rgba(10, 10, 15, ${params.trail})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    const x = cx + r * Math.sin(a * t + delta);
+    const y = cy + r * Math.sin(b * t);
+
+    points.push({ x, y, t: t });
+    if (points.length > 8000) points.shift();
+
+    // Draw the last N points
+    const drawLen = params.mode === 'trace' ? points.length : Math.min(points.length, 1200);
+    const startIdx = Math.max(0, points.length - drawLen);
+
+    for (let i = startIdx + 1; i < points.length; i++) {
+      const p0 = points[i - 1];
+      const p1 = points[i];
+      const tNorm = (i - startIdx) / drawLen;
+      const progress = i / points.length;
+
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+
+      if (params.stroke === 'glow') {
+        ctx.strokeStyle = getColor(progress);
+        ctx.lineWidth = params.lineWidth;
+        ctx.shadowColor = getColor(progress);
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      } else if (params.stroke === 'dashed') {
+        ctx.strokeStyle = getColor(progress);
+        ctx.lineWidth = params.lineWidth;
+        ctx.setLineDash([4, 6]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        ctx.strokeStyle = getColor(progress);
+        ctx.lineWidth = params.lineWidth;
+        ctx.stroke();
+      }
+    }
+
+    // Draw current point
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = getColor(1);
+    ctx.shadowColor = getColor(1);
+    ctx.shadowBlur = 10;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    t += params.speed * 0.02;
+  }
+
+  function animate() {
+    if (params.mode === 'static') {
+      drawStaticCurve();
+    } else {
+      animateTrace();
+    }
+
+    frameCount++;
+    const now = performance.now();
+    if (now - lastFpsTime > 1000) {
+      fps = Math.round(frameCount * 1000 / (now - lastFpsTime));
+      frameCount = 0;
+      lastFpsTime = now;
+      document.getElementById('stats-bar').textContent =
+        `Frequency: ${params.a}:${params.b} · δ: ${(params.delta / Math.PI).toFixed(2)}π · FPS: ${fps}`;
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  // ===== Controls =====
+  function bindSlider(id, param, display) {
+    const el = document.getElementById('ctrl-' + id);
+    const val = document.getElementById('val-' + id);
+    el.addEventListener('input', () => {
+      const v = parseFloat(el.value);
+      params[param] = v;
+      if (id === 'delta') {
+        val.textContent = (v / Math.PI).toFixed(2) + 'π';
+      } else {
+        val.textContent = v;
+      }
+      if (param === 'a' || param === 'b' || param === 'delta') {
+        points = [];
+        ctx.fillStyle = '#0a0a0f';
+        ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+      }
+    });
+  }
+
+  bindSlider('a', 'a');
+  bindSlider('b', 'b');
+  bindSlider('delta', 'delta');
+  bindSlider('speed', 'speed');
+  bindSlider('trail', 'trail');
+  bindSlider('linewidth', 'lineWidth');
+  bindSlider('radius', 'radius');
+  bindSlider('hue', 'hue');
+
+  // Color swatches
+  document.querySelectorAll('.color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      swatch.classList.add('active');
+      params.colorScheme = swatch.dataset.color;
+    });
+  });
+
+  // Mode toggles
+  document.querySelectorAll('.toggle-btn[data-mode]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.toggle-btn[data-mode]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      params.mode = btn.dataset.mode;
+      if (params.mode === 'static') {
+        drawStaticCurve();
+      } else {
+        points = [];
+        ctx.fillStyle = '#0a0a0f';
+        ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+      }
+    });
+  });
+
+  // Stroke toggles
+  document.querySelectorAll('.toggle-btn[data-stroke]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.toggle-btn[data-stroke]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      params.stroke = btn.dataset.stroke;
+    });
+  });
+
+  // Presets
+  const presets = {
+    figure8: { a: 1, b: 2, delta: Math.PI / 2, speed: 0.5, trail: 0.015, lineWidth: 2, radius: 0.85, colorScheme: 'spectrum' },
+    trefoil: { a: 2, b: 3, delta: Math.PI / 2, speed: 0.5, trail: 0.015, lineWidth: 2, radius: 0.85, colorScheme: 'neon' },
+    cardioid: { a: 3, b: 2, delta: Math.PI / 2, speed: 0.5, trail: 0.015, lineWidth: 2, radius: 0.85, colorScheme: 'aurora' },
+    lissajous35: { a: 3, b: 5, delta: Math.PI / 3, speed: 0.4, trail: 0.012, lineWidth: 1.5, radius: 0.85, colorScheme: 'void' },
+    star: { a: 5, b: 4, delta: Math.PI / 4, speed: 0.6, trail: 0.018, lineWidth: 2.5, radius: 0.85, colorScheme: 'sunset' },
+    lace: { a: 5, b: 7, delta: Math.PI / 2, speed: 0.3, trail: 0.01, lineWidth: 1, radius: 0.85, colorScheme: 'spectrum' },
+    butterfly: { a: 3, b: 4, delta: Math.PI / 4, speed: 0.5, trail: 0.015, lineWidth: 2, radius: 0.85, colorScheme: 'neon' },
+    pulsar: { a: 7, b: 9, delta: Math.PI / 3, speed: 0.8, trail: 0.02, lineWidth: 1.5, radius: 0.85, colorScheme: 'aurora' }
+  };
+
+  function applyPreset(name) {
+    const p = presets[name];
+    if (!p) return;
+    params = { ...params, ...p };
+    // Update sliders
+    document.getElementById('ctrl-a').value = p.a;
+    document.getElementById('val-a').textContent = p.a;
+    document.getElementById('ctrl-b').value = p.b;
+    document.getElementById('val-b').textContent = p.b;
+    document.getElementById('ctrl-delta').value = p.delta;
+    document.getElementById('val-delta').textContent = (p.delta / Math.PI).toFixed(2) + 'π';
+    document.getElementById('ctrl-speed').value = p.speed;
+    document.getElementById('val-speed').textContent = p.speed;
+    document.getElementById('ctrl-trail').value = p.trail;
+    document.getElementById('val-trail').textContent = p.trail;
+    document.getElementById('ctrl-linewidth').value = p.lineWidth;
+    document.getElementById('val-linewidth').textContent = p.lineWidth;
+    document.getElementById('ctrl-radius').value = p.radius;
+    document.getElementById('val-radius').textContent = p.radius;
+    document.getElementById('ctrl-hue').value = 0;
+    document.getElementById('val-hue').textContent = 0;
+    // Color
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    const target = document.querySelector(`.color-swatch[data-color="${p.colorScheme}"]`);
+    if (target) target.classList.add('active');
+    // Clear
+    points = [];
+    t = 0;
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  }
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+  });
+
+  // Regenerate / Clear
+  document.getElementById('btn-regenerate').addEventListener('click', () => {
+    points = [];
+    t = 0;
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  });
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    points = [];
+    t = 0;
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  });
+
+  // ===== Init =====
+  window.addEventListener('resize', () => {
+    resize();
+    points = [];
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  });
+  resize();
+  animate();
+  </script>
+</body>
+</html>

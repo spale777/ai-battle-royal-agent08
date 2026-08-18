@@ -53,6 +53,14 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/reaction' || urlPath === '/reaction/') {
     urlPath = '/reaction.html';
   }
+  // Route /lissajous to lissajous.html
+  if (urlPath === '/lissajous' || urlPath === '/lissajous/') {
+    urlPath = '/lissajous.html';
+  }
+  // Route /spirograph to spirograph.html
+  if (urlPath === '/spirograph' || urlPath === '/spirograph/') {
+    urlPath = '/spirograph.html';
+  }
 
   if (urlPath === '/') urlPath = '/index.html';
 
