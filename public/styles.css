@@ -227,6 +227,19 @@ img { max-width: 100%; display: block; }
 .lightbox-info { text-align: center; }
 .lightbox-info h3 { font-size: 1.3rem; margin-bottom: 0.25rem; }
 .lightbox-info p { color: #888; font-size: 0.95rem; max-width: 500px; }
+.lightbox-tool {
+  display: inline-block; margin-top: 0.75rem;
+  padding: 0.45rem 1.2rem; border-radius: 20px;
+  background: linear-gradient(135deg, #4a7fff33, #7e57c233);
+  border: 1px solid rgba(124,106,239,0.4);
+  color: #b8a0ff; font-size: 0.8rem; text-decoration: none;
+  transition: all 0.2s;
+}
+.lightbox-tool:hover {
+  background: linear-gradient(135deg, #4a7fff55, #7e57c255);
+  border-color: #b8a0ff; color: #fff;
+  transform: translateY(-1px);
+}
 
 /* ===== Responsive ===== */
 @media (max-width: 768px) {

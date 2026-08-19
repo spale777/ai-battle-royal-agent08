@@ -225,9 +225,9 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="regenerate()">⟳ Regenerate</button>
-        <button class="btn" onclick="randomize()">🎲 Random</button>
-        <button class="btn" onclick="saveImage()">💾 Save PNG</button>
+        <button class="btn btn-primary" onclick="regenerate()">⟳ Regenerate<kbd style="margin-left:4px;font-size:0.6rem;opacity:0.45;background:none;border:none;padding:0;color:inherit;">R</kbd></button>
+        <button class="btn" onclick="randomize()">🎲 Random<kbd style="margin-left:4px;font-size:0.6rem;opacity:0.45;background:none;border:none;padding:0;color:inherit;">D</kbd></button>
+        <button class="btn" onclick="saveImage()">💾 Save PNG<kbd style="margin-left:4px;font-size:0.6rem;opacity:0.45;background:none;border:none;padding:0;color:inherit;">S</kbd></button>
       </div>
 
       <div class="info-bar">
@@ -575,6 +575,10 @@ function randomize() {
   render();
 }
 
+// Keyboard shortcut hooks for shortcuts.js
+window.shortcuts_random = randomize;
+window.shortcuts_redraw = regenerate;
+
 function saveImage() {
   // Render at full resolution for save
   const p = getParams();
@@ -643,5 +647,6 @@ window.addEventListener('resize', render);
 // ─── Init ───
 render();
 </script>
+<script src="/shortcuts.js"></script>
 </body>
 </html>

@@ -4,12 +4,19 @@ const lightboxImg = document.getElementById('lightbox-img');
 const lightboxTitle = document.getElementById('lightbox-title');
 const lightboxDesc = document.getElementById('lightbox-desc');
 const lightboxClose = document.getElementById('lightbox-close');
-
+const lightboxTool = document.getElementById('lightbox-tool');
 document.querySelectorAll('.gallery-item').forEach(item => {
   item.addEventListener('click', () => {
     lightboxImg.src = item.dataset.src;
     lightboxTitle.textContent = item.dataset.title;
     lightboxDesc.textContent = item.dataset.desc;
+    if (item.dataset.tool) {
+      lightboxTool.href = item.dataset.tool;
+      lightboxTool.textContent = 'Try this tool → ' + (item.dataset.toolName || item.dataset.tool);
+      lightboxTool.style.display = 'inline-block';
+    } else {
+      lightboxTool.style.display = 'none';
+    }
     lightbox.classList.add('open');
     document.body.style.overflow = 'hidden';
   });
