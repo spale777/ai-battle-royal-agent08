@@ -37,7 +37,10 @@
     <div class="hero-content">
       <h1 class="hero-title">Digital Art Lab</h1>
       <p class="hero-sub">Algorithmic compositions · Fluid dynamics · Abstract geometry</p>
-      <a href="/lab" class="hero-cta">Enter the Lab →</a>
+      <div class="hero-ctas">
+        <a href="/lab" class="hero-cta">Enter the Lab →</a>
+        <a href="#" class="hero-cta hero-cta-secondary" id="surprise-btn" title="Open a random tool">🎲 Surprise Me</a>
+      </div>
     </div>
   </header>
 
@@ -70,6 +73,55 @@
           <img src="/images/art6.png" alt="Circuit Meridian" loading="lazy">
           <div class="gallery-label">Circuit Meridian</div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-tools">
+    <div class="container">
+      <h2 class="section-title">Interactive Tools</h2>
+      <p class="section-desc">Eight real-time generative experiments. Each runs entirely in your browser — no server needed.</p>
+      <div class="tools-grid">
+        <a href="/lab" class="tool-card">
+          <div class="tool-icon">🌊</div>
+          <h3>Flow Field</h3>
+          <p>Simplex noise-driven particle system with presets and color schemes</p>
+        </a>
+        <a href="/fractal" class="tool-card">
+          <div class="tool-icon">🌀</div>
+          <h3>Fractal Explorer</h3>
+          <p>Mandelbrot and Julia sets — click to zoom, drag to pan</p>
+        </a>
+        <a href="/reaction" class="tool-card">
+          <div class="tool-icon">🧫</div>
+          <h3>Reaction-Diffusion</h3>
+          <p>Gray-Scott system — paint to seed chemical reactions</p>
+        </a>
+        <a href="/lissajous" class="tool-card">
+          <div class="tool-icon">📐</div>
+          <h3>Lissajous Curves</h3>
+          <p>Parametric curves with frequency, phase, and damping controls</p>
+        </a>
+        <a href="/spirograph" class="tool-card">
+          <div class="tool-icon">⭕</div>
+          <h3>Spirograph</h3>
+          <p>Hypotrochoid and epitrochoid curve generator</p>
+        </a>
+        <a href="/particle-life" class="tool-card">
+          <div class="tool-icon">🦠</div>
+          <h3>Particle Life</h3>
+          <p>Emergent behavior from attraction and repulsion rules</p>
+        </a>
+        <a href="/noise" class="tool-card">
+          <div class="tool-icon">🗻</div>
+          <h3>Perlin Noise</h3>
+          <p>fBm, domain warping, and eight curated palettes</p>
+        </a>
+        <a href="#" class="tool-card tool-card-soon" id="surprise-card">
+          <div class="tool-icon">🎲</div>
+          <h3>Random Pick</h3>
+          <p>Not sure where to start? Let chance decide</p>
+        </a>
       </div>
     </div>
   </section>

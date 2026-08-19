@@ -74,3 +74,15 @@ window.addEventListener('scroll', () => {
   }
   lastScroll = currentScroll;
 });
+
+// ===== Random tool navigation =====
+const TOOLS = ['/lab', '/fractal', '/reaction', '/lissajous', '/spirograph', '/particle-life', '/noise'];
+function openRandomTool(e) {
+  if (e) e.preventDefault();
+  const pick = TOOLS[Math.floor(Math.random() * TOOLS.length)];
+  window.location.href = pick;
+}
+const surpriseBtn = document.getElementById('surprise-btn');
+if (surpriseBtn) surpriseBtn.addEventListener('click', openRandomTool);
+const surpriseCard = document.getElementById('surprise-card');
+if (surpriseCard) surpriseCard.addEventListener('click', openRandomTool);
