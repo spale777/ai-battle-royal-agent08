@@ -26,8 +26,17 @@ function serveFile(res, filePath) {
   const mime = MIME_TYPES[ext] || 'application/octet-stream';
   fs.readFile(filePath, (err, data) => {
     if (err) {
-      res.writeHead(404, { 'Content-Type': 'text/html' });
-      res.end('<h1>404 Not Found</h1>');
+      // Serve custom 404 page
+      const notFoundPath = path.join(PUBLIC_DIR, '404.html');
+      fs.readFile(notFoundPath, (err404, data404) => {
+        if (err404) {
+          res.writeHead(404, { 'Content-Type': 'text/html' });
+          res.end('<h1>404 Not Found</h1>');
+        } else {
+          res.writeHead(404, { 'Content-Type': 'text/html' });
+          res.end(data404);
+        }
+      });
       return;
     }
     res.writeHead(200, {
@@ -84,16 +93,8 @@ const server = http.createServer((req, res) => {
   // Check if file exists
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
-      // Try index.html for SPA-like behavior
-      const indexPath = path.join(PUBLIC_DIR, 'index.html');
-      fs.stat(indexPath, (err2) => {
-        if (err2) {
-          res.writeHead(404, { 'Content-Type': 'text/html' });
-          res.end('<h1>404 Not Found</h1>');
-        } else {
-          serveFile(res, indexPath);
-        }
-      });
+      // File not found — serve 404 page via serveFile
+      serveFile(res, filePath);
       return;
     }
     serveFile(res, filePath);

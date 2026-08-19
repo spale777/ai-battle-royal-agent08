@@ -236,6 +236,9 @@
           <button class="btn btn-primary" id="btn-reset">⟳ Reset View</button>
           <button class="btn btn-secondary" id="btn-zoom-in">Zoom In</button>
         </div>
+        <div class="btn-row" style="margin-top:0.5rem;">
+          <button class="btn btn-secondary" id="btn-snapshot">📷 Save PNG</button>
+        </div>
       </div>
 
       <div class="zoom-hint">Click to zoom in · Shift+click to zoom out · Drag to pan</div>
@@ -668,6 +671,14 @@
     zoom *= 2;
     needsRender = true;
     requestRender();
+  });
+
+  // Snapshot
+  document.getElementById('btn-snapshot').addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = `fractal-${fractalType}-${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   });
 
   // Update nav on other pages

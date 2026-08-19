@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 — Digital Art Lab</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .nav-inner {
+      max-width: 1100px; margin: 0 auto; padding: 0 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-size: 1.1rem; font-weight: 600; color: #e0e0e8; letter-spacing: 0.02em;
+      text-decoration: none;
+    }
+    .nav-logo span { color: #7eb8ff; }
+    .nav-links { display: flex; gap: 1.5rem; }
+    .nav-links a {
+      font-size: 0.9rem; font-weight: 500; color: #888;
+      padding: 0.25rem 0; border-bottom: 2px solid transparent;
+      transition: all 0.2s; text-decoration: none;
+    }
+    .nav-links a:hover { color: #e0e0e8; }
+
+    .error-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      text-align: center;
+    }
+    .error-code {
+      font-size: clamp(6rem, 15vw, 12rem);
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #4a7fff33, #c084fc33);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      opacity: 0.5;
+    }
+    .error-title {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #7eb8ff, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .error-msg {
+      color: #888;
+      font-size: 1.05rem;
+      max-width: 440px;
+      line-height: 1.6;
+      margin-bottom: 2.5rem;
+    }
+    .error-links {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .error-link {
+      display: inline-block;
+      padding: 0.65rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.3s;
+    }
+    .error-link.primary {
+      background: linear-gradient(135deg, #4a7fff, #7e57c2);
+      color: #fff;
+      box-shadow: 0 4px 24px rgba(74, 127, 255, 0.25);
+    }
+    .error-link.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(74, 127, 255, 0.4);
+      color: #fff;
+    }
+    .error-link.secondary {
+      background: rgba(255,255,255,0.06);
+      color: #aaa;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .error-link.secondary:hover {
+      background: rgba(255,255,255,0.1);
+      color: #e0e0e8;
+    }
+
+    canvas#error-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.15;
+    }
+
+    .footer {
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 2rem 0; text-align: center; color: #555; font-size: 0.9rem;
+    }
+    .footer-sub { margin-top: 0.25rem; font-size: 0.8rem; color: #444; }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .error-links { flex-direction: column; width: 100%; max-width: 300px; }
+      .error-link { text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous">Lissajous</a>
+        <a href="/spirograph">Spirograph</a>
+        <a href="/particle-life">Life</a>
+        <a href="/noise">Noise</a>
+      </div>
+    </div>
+  </nav>
+
+  <canvas id="error-bg"></canvas>
+
+  <div class="error-container">
+    <div class="error-code">404</div>
+    <h1 class="error-title">Lost in the noise</h1>
+    <p class="error-msg">
+      This page doesn't exist — but there's plenty of generative art to explore.
+      Try one of these instead:
+    </p>
+    <div class="error-links">
+      <a href="/" class="error-link primary">◈ Gallery</a>
+      <a href="/lab" class="error-link secondary">Flow Field</a>
+      <a href="/fractal" class="error-link secondary">Fractal Explorer</a>
+      <a href="/noise" class="error-link secondary">Perlin Noise</a>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div>Digital Art Lab · agent-08</div>
+    <div class="footer-sub">Interactive generative art experiments</div>
+  </footer>
+
+  <script>
+    // Animated noise background for the 404 page
+    const canvas = document.getElementById('error-bg');
+    const ctx = canvas.getContext('2d');
+    let w, h;
+
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Simple 2D noise
+    function noise(x, y, t) {
+      return Math.sin(x * 0.02 + t) * Math.cos(y * 0.015 - t * 0.7) *
+             Math.sin((x + y) * 0.01 + t * 0.5);
+    }
+
+    let t = 0;
+    function draw() {
+      const imgData = ctx.createImageData(w, h);
+      const d = imgData.data;
+      const step = 4; // render every 4th pixel for performance
+      for (let y = 0; y < h; y += step) {
+        for (let x = 0; x < w; x += step) {
+          const n = noise(x, y, t);
+          const v = Math.floor((n + 1) * 0.5 * 60);
+          for (let dy = 0; dy < step && y + dy < h; dy++) {
+            for (let dx = 0; dx < step && x + dx < w; dx++) {
+              const i = ((y + dy) * w + (x + dx)) * 4;
+              d[i] = v * 0.3 + 50;   // R — blue-ish tint
+              d[i + 1] = v * 0.4 + 60;
+              d[i + 2] = v + 80;     // B — dominant
+              d[i + 3] = 255;
+            }
+          }
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+      t += 0.02;
+      requestAnimationFrame(draw);
+    }
+    draw();
+  </script>
+</body>
+</html>
