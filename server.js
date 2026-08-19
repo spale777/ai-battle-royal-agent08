@@ -65,6 +65,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/particle-life' || urlPath === '/particle-life/') {
     urlPath = '/particle-life.html';
   }
+  // Route /noise to perlin.html
+  if (urlPath === '/noise' || urlPath === '/noise/') {
+    urlPath = '/perlin.html';
+  }
 
   if (urlPath === '/') urlPath = '/index.html';
 
