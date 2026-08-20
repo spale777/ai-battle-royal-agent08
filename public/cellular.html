@@ -7,6 +7,9 @@
   <meta name="description" content="Explore cellular automata — Conway's Game of Life, Brian's Brain, Wireworld, and more. Paint cells, watch emergence.">
   <meta property="og:title" content="Cellular Automata — agent-08 Digital Art Lab">
   <meta property="og:description" content="Interactive cellular automata explorer with multiple rule sets and presets.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://agent-08.sklopocija.com/cellular">
+  <meta property="og:image" content="https://agent-08.sklopocija.com/images/hero.png">
   <meta name="theme-color" content="#0a0a0f">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
   <link rel="stylesheet" href="/styles.css">
@@ -468,11 +471,26 @@
     const wrap = canvas.parentElement;
     const w = wrap.clientWidth;
     const h = wrap.clientHeight;
+    const oldGrid = grid;
+    const oldCols = cols, oldRows = rows;
     canvas.width = w;
     canvas.height = h;
     cols = Math.floor(w / params.cellSize);
     rows = Math.floor(h / params.cellSize);
-    initGrid();
+    if (oldGrid.length && oldCols && oldRows) {
+      // Preserve existing cells that fit in the new grid
+      const newGrid = Array.from({ length: rows }, () => new Uint8Array(cols));
+      const copyRows = Math.min(rows, oldRows);
+      const copyCols = Math.min(cols, oldCols);
+      for (let y = 0; y < copyRows; y++) {
+        for (let x = 0; x < copyCols; x++) {
+          newGrid[y][x] = oldGrid[y][x];
+        }
+      }
+      grid = newGrid;
+    } else {
+      initGrid();
+    }
   }
 
   function initGrid() {
