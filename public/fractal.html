@@ -685,7 +685,47 @@
   window.addEventListener('resize', () => { resize(); needsRender = true; requestRender(); });
   resize();
   render();
+
+  // ===== Share =====
+  window.getShareParams = function () {
+    return {
+      type: fractalType,
+      cx: center.x, cy: center.y, zoom: zoom,
+      maxIter: maxIter,
+      juliaX: juliaC.x, juliaY: juliaC.y,
+      colorScheme: colorScheme
+    };
+  };
+
+  window.applyShareParams = function (s) {
+    if (s.type) {
+      fractalType = s.type;
+      document.querySelectorAll('.type-btn').forEach(function (b) {
+        b.classList.toggle('active', b.dataset.type === fractalType);
+      });
+    }
+    if (s.cx !== undefined) center.x = s.cx;
+    if (s.cy !== undefined) center.y = s.cy;
+    if (s.zoom !== undefined) zoom = s.zoom;
+    if (s.maxIter !== undefined) {
+      maxIter = s.maxIter;
+      document.getElementById('ctrl-iter').value = maxIter;
+      document.getElementById('val-iter').textContent = maxIter;
+    }
+    if (s.juliaX !== undefined) juliaC.x = s.juliaX;
+    if (s.juliaY !== undefined) juliaC.y = s.juliaY;
+    if (s.colorScheme) {
+      colorScheme = s.colorScheme;
+      document.querySelectorAll('.color-swatch').forEach(function (sw) {
+        sw.classList.toggle('active', sw.dataset.color === colorScheme);
+      });
+    }
+    updateCoords();
+    needsRender = true;
+    requestRender();
+  };
   </script>
+<script src="/share.js"></script>
 <script src="/shortcuts.js"></script>
 </body>
 </html>

@@ -501,7 +501,47 @@
     window.addEventListener('resize', () => { resize(); if (!running) drawSpirograph(); });
     resize();
     drawSpirograph();
+
+    // ===== Share =====
+    window.getShareParams = function () {
+      var p = getParams();
+      return {
+        R: p.R, r: p.r, d: p.d, speed: p.speed,
+        lineWidth: p.lineWidth, trailOpacity: p.trailOpacity,
+        colorCycles: p.colorCycles, lineColor: p.lineColor,
+        bgColor: p.bgColor, type: curveType
+      };
+    };
+
+    window.applyShareParams = function (s) {
+      // Restore slider values
+      var map = [
+        ['outerR', 'R', 'vOuter'], ['innerR', 'r', 'vInner'],
+        ['penOffset', 'd', 'vPen'], ['speed', 'speed', 'vSpeed'],
+        ['lineWidth', 'lineWidth', 'vWidth'],
+        ['trailOpacity', 'trailOpacity', 'vOpacity'],
+        ['colorCycles', 'colorCycles', 'vCycles']
+      ];
+      map.forEach(function (m) {
+        var elId = m[0], key = m[1], valId = m[2];
+        if (s[key] !== undefined) {
+          els[elId].value = s[key];
+          vEls[elId].textContent = s[key];
+        }
+      });
+      if (s.lineColor) els.lineColor.value = s.lineColor;
+      if (s.bgColor) els.bgColor.value = s.bgColor;
+      if (s.type) {
+        curveType = s.type;
+        document.querySelectorAll('[data-type]').forEach(function (b) {
+          b.classList.toggle('active', b.dataset.type === curveType);
+        });
+      }
+      reset();
+      if (!running) drawSpirograph();
+    };
   </script>
+<script src="/share.js"></script>
 <script src="/shortcuts.js"></script>
 </body>
 </html>

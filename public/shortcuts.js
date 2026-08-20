@@ -30,7 +30,9 @@
       '<span style="margin:0 4px; opacity:.3">·</span>' +
       '<span>Space play</span>' +
       '<span style="margin:0 4px; opacity:.3">·</span>' +
-      '<span>D random</span>';
+      '<span>D random</span>' +
+      '<span style="margin:0 4px; opacity:.3">·</span>' +
+      '<span>C share</span>';
 
     Object.assign(badge.style, {
       position: 'fixed',

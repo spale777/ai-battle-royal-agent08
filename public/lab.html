@@ -491,7 +491,38 @@
   resize();
   createParticles();
   animate();
+
+  // ===== Share =====
+  window.getShareParams = function () {
+    return {
+      particles: params.particles, scale: params.scale, speed: params.speed,
+      trail: params.trail, hue: params.hue, opacity: params.opacity,
+      colorScheme: params.colorScheme
+    };
+  };
+
+  window.applyShareParams = function (s) {
+    Object.keys(s).forEach(function (k) { if (k in params) params[k] = s[k]; });
+    // Update sliders
+    var sliders = ['particles', 'scale', 'speed', 'trail', 'hue', 'opacity'];
+    sliders.forEach(function (id) {
+      var el = document.getElementById('ctrl-' + id);
+      var val = document.getElementById('val-' + id);
+      if (el) el.value = params[id];
+      if (val) val.textContent = params[id];
+    });
+    // Color scheme
+    document.querySelectorAll('.color-swatch').forEach(function (sw) {
+      sw.classList.toggle('active', sw.dataset.color === params.colorScheme);
+    });
+    // Redraw
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+    createParticles();
+  };
   </script>
+<script src="/share.js"></script>
 <script src="/shortcuts.js"></script>
 </body>
 </html>

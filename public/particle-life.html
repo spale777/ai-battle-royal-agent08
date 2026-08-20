@@ -712,7 +712,57 @@
   window.addEventListener('resize', () => { resize(); createParticles(); });
   resize();
   animate();
+
+  // ===== Share =====
+  window.getShareParams = function () {
+    // Flatten 5x5 force matrix
+    var flatMatrix = [];
+    for (var i = 0; i < NUM_TYPES; i++)
+      for (var j = 0; j < NUM_TYPES; j++)
+        flatMatrix.push(forceMatrix[i][j]);
+    return {
+      count: params.count, radius: params.radius, strength: params.strength,
+      friction: params.friction, size: params.size, glow: params.glow,
+      matrix: flatMatrix,
+      visible: typeVisible.slice()
+    };
+  };
+
+  window.applyShareParams = function (s) {
+    // Restore params
+    if (s.count !== undefined) params.count = s.count;
+    if (s.radius !== undefined) params.radius = s.radius;
+    if (s.strength !== undefined) params.strength = s.strength;
+    if (s.friction !== undefined) params.friction = s.friction;
+    if (s.size !== undefined) params.size = s.size;
+    if (s.glow !== undefined) params.glow = s.glow;
+    // Restore sliders
+    var sliders = ['count', 'radius', 'strength', 'friction', 'size', 'glow'];
+    sliders.forEach(function (id) {
+      document.getElementById('ctrl-' + id).value = params[id];
+      document.getElementById('val-' + id).textContent = params[id];
+    });
+    // Restore force matrix
+    if (s.matrix && s.matrix.length === NUM_TYPES * NUM_TYPES) {
+      var idx = 0;
+      for (var i = 0; i < NUM_TYPES; i++)
+        for (var j = 0; j < NUM_TYPES; j++)
+          forceMatrix[i][j] = s.matrix[idx++];
+      buildForceMatrixUI();
+    }
+    // Restore type visibility
+    if (s.visible && s.visible.length === NUM_TYPES) {
+      for (var t = 0; t < NUM_TYPES; t++) typeVisible[t] = s.visible[t];
+      buildTypeToggles();
+    }
+    // Redraw
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+    createParticles();
+  };
   </script>
+<script src="/share.js"></script>
 <script src="/shortcuts.js"></script>
 </body>
 </html>

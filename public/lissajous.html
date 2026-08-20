@@ -615,7 +615,56 @@
   });
   resize();
   animate();
+
+  // ===== Share =====
+  window.getShareParams = function () {
+    return {
+      a: params.a, b: params.b, delta: params.delta,
+      speed: params.speed, trail: params.trail, lineWidth: params.lineWidth,
+      radius: params.radius, hue: params.hue,
+      colorScheme: params.colorScheme, mode: params.mode, stroke: params.stroke
+    };
+  };
+
+  window.applyShareParams = function (s) {
+    // Update params
+    Object.keys(s).forEach(function (k) { if (k in params) params[k] = s[k]; });
+    // Update sliders
+    const sliders = [
+      ['a', 'a'], ['b', 'b'], ['delta', 'delta'],
+      ['speed', 'speed'], ['trail', 'trail'],
+      ['linewidth', 'lineWidth'], ['radius', 'radius'], ['hue', 'hue']
+    ];
+    sliders.forEach(function (pair) {
+      var id = pair[0], key = pair[1];
+      var el = document.getElementById('ctrl-' + id);
+      var val = document.getElementById('val-' + id);
+      if (el) el.value = params[key];
+      if (val) {
+        if (id === 'delta') val.textContent = (params[key] / Math.PI).toFixed(2) + 'π';
+        else val.textContent = params[key];
+      }
+    });
+    // Color scheme
+    document.querySelectorAll('.color-swatch').forEach(function (s2) {
+      s2.classList.toggle('active', s2.dataset.color === params.colorScheme);
+    });
+    // Mode toggle
+    document.querySelectorAll('.toggle-btn[data-mode]').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.mode === params.mode);
+    });
+    // Stroke toggle
+    document.querySelectorAll('.toggle-btn[data-stroke]').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.stroke === params.stroke);
+    });
+    // Redraw
+    points = [];
+    t = 0;
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  };
   </script>
+<script src="/share.js"></script>
 <script src="/shortcuts.js"></script>
 </body>
 </html>

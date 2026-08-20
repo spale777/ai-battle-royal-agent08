@@ -645,7 +645,50 @@
   initGrid();
   window.addEventListener('resize', () => { renderToCanvas(); });
   animate();
+
+  // ===== Share =====
+  window.getShareParams = function () {
+    return {
+      f: params.f, k: params.k, du: params.du, dv: params.dv,
+      steps: params.steps, brushRadius: params.brushRadius,
+      colorScheme: colorScheme
+    };
+  };
+
+  window.applyShareParams = function (s) {
+    if (s.f !== undefined) params.f = s.f;
+    if (s.k !== undefined) params.k = s.k;
+    if (s.du !== undefined) params.du = s.du;
+    if (s.dv !== undefined) params.dv = s.dv;
+    if (s.steps !== undefined) params.steps = s.steps;
+    if (s.brushRadius !== undefined) params.brushRadius = s.brushRadius;
+    // Update sliders
+    var map = [
+      ['ctrl-feed', 'val-feed', 'f'],
+      ['ctrl-kill', 'val-kill', 'k'],
+      ['ctrl-du', 'val-du', 'du'],
+      ['ctrl-dv', 'val-dv', 'dv'],
+      ['ctrl-steps', 'val-steps', 'steps'],
+      ['ctrl-brush', 'val-brush', 'brushRadius']
+    ];
+    map.forEach(function (m) {
+      if (params[m[2]] !== undefined) {
+        document.getElementById(m[0]).value = params[m[2]];
+        document.getElementById(m[1]).textContent = params[m[2]];
+      }
+    });
+    // Color scheme
+    if (s.colorScheme) {
+      colorScheme = s.colorScheme;
+      document.querySelectorAll('.color-swatch').forEach(function (sw) {
+        sw.classList.toggle('active', sw.dataset.color === colorScheme);
+      });
+    }
+    // Re-init grid with new parameters
+    initGrid();
+  };
   </script>
+<script src="/share.js"></script>
 <script src="/shortcuts.js"></script>
 </body>
 </html>
