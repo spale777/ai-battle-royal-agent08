@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cellular Automata — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Explore cellular automata — Conway's Game of Life, Brian's Brain, Wireworld, and more. Paint cells, watch emergence.">
+  <meta property="og:title" content="Cellular Automata — agent-08 Digital Art Lab">
+  <meta property="og:description" content="Interactive cellular automata explorer with multiple rule sets and presets.">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a0f; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+
+    .lab-layout {
+      display: flex; height: 100vh; padding-top: 56px;
+    }
+    .lab-canvas-wrap {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0a0f;
+    }
+    .lab-canvas-wrap canvas {
+      display: block; max-width: 100%; max-height: 100%;
+      cursor: crosshair;
+    }
+
+    .lab-sidebar {
+      width: 280px; min-width: 280px;
+      background: #0f0f18;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto; padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .lab-sidebar h2 {
+      font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;
+      color: #7eb8ff; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .lab-sidebar h3 {
+      font-size: 0.85rem; font-weight: 600; color: #aaa;
+      margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    .control-group { margin-bottom: 0.5rem; }
+    .control-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;
+    }
+    .control-label .val { color: #7eb8ff; font-weight: 600; font-size: 0.75rem; }
+
+    input[type="range"] {
+      width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+      background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer;
+      box-shadow: 0 0 8px rgba(126,184,255,0.4);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer; border: none;
+    }
+
+    select {
+      width: 100%; padding: 0.4rem 0.6rem; font-size: 0.8rem;
+      background: rgba(255,255,255,0.06); color: #ccc;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+      font-family: inherit; outline: none; cursor: pointer;
+    }
+    select:focus { border-color: rgba(126,184,255,0.4); }
+    option { background: #1a1a2e; color: #ccc; }
+
+    .preset-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+    }
+    .preset-btn {
+      padding: 0.4rem 0.5rem; font-size: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #bbb; border-radius: 6px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .preset-btn:hover {
+      background: rgba(126,184,255,0.1);
+      border-color: rgba(126,184,255,0.3);
+      color: #7eb8ff;
+    }
+
+    .btn {
+      padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4a7fff, #7e57c2);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(74, 127, 255, 0.3);
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: #aaa; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      color: #ddd;
+    }
+
+    .btn-row {
+      display: flex; gap: 0.5rem; flex-wrap: wrap;
+    }
+    .btn-row .btn { flex: 1; min-width: 0; text-align: center; font-size: 0.8rem; padding: 0.5rem 0.4rem; }
+
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;
+    }
+
+    .toggle {
+      position: relative; width: 36px; height: 20px;
+      background: rgba(255,255,255,0.1); border-radius: 10px;
+      cursor: pointer; transition: background 0.3s;
+    }
+    .toggle.active { background: rgba(126,184,255,0.6); }
+    .toggle::after {
+      content: ''; position: absolute; top: 2px; left: 2px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; transition: transform 0.3s;
+    }
+    .toggle.active::after { transform: translateX(16px); }
+
+    .stats-bar {
+      font-size: 0.75rem; color: #666; padding-top: 0.5rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .stats-bar span { color: #7eb8ff; font-weight: 600; }
+
+    .color-swatch-row {
+      display: flex; gap: 0.35rem; flex-wrap: wrap;
+    }
+    .color-swatch {
+      width: 22px; height: 22px; border-radius: 4px; cursor: pointer;
+      border: 2px solid transparent; transition: all 0.2s;
+    }
+    .color-swatch.active {
+      border-color: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.3);
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous">Lissajous</a>
+        <a href="/spirograph">Spirograph</a>
+        <a href="/particle-life">Life</a>
+        <a href="/noise">Noise</a>
+        <a href="/cellular" class="active">Automata</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="lab-layout">
+    <div class="lab-canvas-wrap">
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="lab-sidebar">
+      <div>
+        <h2>⬡ Cellular Automata</h2>
+        <p style="font-size:0.78rem; color:#666; margin-bottom:0.5rem;">
+          Paint cells with left-click, erase with right-click. Watch patterns emerge from simple rules.
+        </p>
+      </div>
+
+      <!-- Rule Set -->
+      <div class="control-group">
+        <h3>Rule Set</h3>
+        <select id="ctrl-rule">
+          <option value="life">Conway's Game of Life</option>
+          <option value="highlife">HighLife (B36/S23)</option>
+          <option value="daynight">Day & Night (B3678/S34678)</option>
+          <option value="brians">Brian's Brain</option>
+          <option value="wireworld">Wireworld</option>
+          <option value="seeds">Seeds (B2/S)</option>
+        </select>
+      </div>
+
+      <!-- Playback -->
+      <div class="control-group">
+        <h3>Playback</h3>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-pause">▶ Play</button>
+          <button class="btn btn-secondary" id="btn-step">⏭ Step</button>
+        </div>
+        <div style="height:0.5rem;"></div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="btn-random">🎲 Random</button>
+          <button class="btn btn-secondary" id="btn-clear">🗑 Clear</button>
+        </div>
+      </div>
+
+      <!-- Speed -->
+      <div class="control-group">
+        <div class="control-label">
+          <span>Speed</span>
+          <span class="val" id="val-speed">5</span>
+        </div>
+        <input type="range" id="ctrl-speed" min="1" max="30" value="5" step="1">
+      </div>
+
+      <!-- Cell Size -->
+      <div class="control-group">
+        <div class="control-label">
+          <span>Cell Size</span>
+          <span class="val" id="val-cellsize">6</span>
+        </div>
+        <input type="range" id="ctrl-cellsize" min="2" max="20" value="6" step="1">
+      </div>
+
+      <!-- Fill % for random -->
+      <div class="control-group">
+        <div class="control-label">
+          <span>Fill %</span>
+          <span class="val" id="val-fill">30</span>
+        </div>
+        <input type="range" id="ctrl-fill" min="5" max="80" value="30" step="5">
+      </div>
+
+      <!-- Toggles -->
+      <div class="control-group">
+        <div class="toggle-row">
+          <span>Show Grid</span>
+          <div class="toggle active" id="toggle-grid"></div>
+        </div>
+        <div class="toggle-row" style="margin-top:0.4rem;">
+          <span>Wrap Edges</span>
+          <div class="toggle active" id="toggle-wrap"></div>
+        </div>
+      </div>
+
+      <!-- Color Scheme -->
+      <div class="control-group">
+        <h3>Color Scheme</h3>
+        <div class="color-swatch-row" id="color-swatches"></div>
+      </div>
+
+      <!-- Presets -->
+      <div class="control-group">
+        <h3>Presets</h3>
+        <div class="preset-grid" id="preset-grid"></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="control-group">
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="btn-snapshot">📷 Save PNG</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-bar">
+        Generation: <span id="stat-gen">0</span> · 
+        Alive: <span id="stat-alive">0</span>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ===== State =====
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  const params = {
+    rule: 'life',
+    speed: 5,
+    cellSize: 6,
+    fill: 30,
+    showGrid: true,
+    wrap: true,
+    colorScheme: 'classic',
+  };
+
+  let grid = [], cols = 0, rows = 0;
+  let running = false, gen = 0;
+  let animId = null, lastTick = 0;
+  let painting = false, erasing = false;
+
+  // ===== Color Schemes =====
+  const COLOR_SCHEMES = {
+    classic:  { bg: '#0a0a0f', alive: '#7eb8ff', dead: '#0a0a0f', states: null },
+    neon:     { bg: '#0a0a0f', alive: '#ff3366', dead: '#0a0a0f', states: null },
+    forest:   { bg: '#0a0f0a', alive: '#4ade80', dead: '#0a0f0a', states: null },
+    fire:     { bg: '#0f0a0a', alive: '#f59e0b', dead: '#0f0a0a', states: null },
+    purple:   { bg: '#0a0a0f', alive: '#a855f7', dead: '#0a0a0f', states: null },
+    ice:      { bg: '#0a0f14', alive: '#67e8f9', dead: '#0a0f14', states: null },
+    rainbow:  { bg: '#0a0a0f', alive: '#fff', dead: '#0a0a0f', states: null },
+    // Multi-state schemes for Brian's Brain / Wireworld
+    brian:    { bg: '#0a0a0f', dead: '#0a0a0f', states: ['#7eb8ff', '#ff6b35', '#333'] },
+    wire:     { bg: '#0a0a0f', dead: '#1a1a2e', states: ['#f59e0b', '#ff3366', '#333', '#67e8f9'] },
+  };
+
+  // ===== Rule Definitions =====
+  // Each rule: { type: 'life'|'multi', states, birth[], survive[], nextState(state, neighbors) }
+  function getRule(ruleName) {
+    switch (ruleName) {
+      case 'life':
+        return { type: 'life', states: 2, birth: [3], survive: [2,3] };
+      case 'highlife':
+        return { type: 'life', states: 2, birth: [3,6], survive: [2,3] };
+      case 'daynight':
+        return { type: 'life', states: 2, birth: [3,6,7,8], survive: [3,4,6,7,8] };
+      case 'seeds':
+        return { type: 'life', states: 2, birth: [2], survive: [] };
+      case 'brians':
+        return { type: 'multi', states: 3 };
+      case 'wireworld':
+        return { type: 'multi', states: 4 };
+      default:
+        return { type: 'life', states: 2, birth: [3], survive: [2,3] };
+    }
+  }
+
+  function countNeighbors(x, y, stateVal) {
+    let count = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        let nx = x + dx, ny = y + dy;
+        if (params.wrap) {
+          nx = (nx + cols) % cols;
+          ny = (ny + rows) % rows;
+        } else {
+          if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
+        }
+        if (stateVal !== undefined) {
+          if (grid[ny][nx] === stateVal) count++;
+        } else {
+          if (grid[ny][nx] > 0) count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  function nextGeneration() {
+    const rule = getRule(params.rule);
+    const newGrid = Array.from({ length: rows }, () => new Uint8Array(cols));
+
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const state = grid[y][x];
+
+        if (rule.type === 'life') {
+          const n = countNeighbors(x, y, 1);
+          if (state === 0) {
+            newGrid[y][x] = rule.birth.includes(n) ? 1 : 0;
+          } else {
+            newGrid[y][x] = rule.survive.includes(n) ? 1 : 0;
+          }
+        } else if (params.rule === 'brians') {
+          // Brian's Brain: 0=dead, 1=alive, 2=dying
+          if (state === 0) {
+            const n = countNeighbors(x, y, 1);
+            newGrid[y][x] = n === 2 ? 1 : 0;
+          } else if (state === 1) {
+            newGrid[y][x] = 2;
+          } else {
+            newGrid[y][x] = 0;
+          }
+        } else if (params.rule === 'wireworld') {
+          // Wireworld: 0=empty, 1=head, 2=tail, 3=conductor
+          if (state === 3) {
+            const heads = countNeighbors(x, y, 1);
+            newGrid[y][x] = (heads === 1 || heads === 2) ? 1 : 3;
+          } else if (state === 1) {
+            newGrid[y][x] = 2;
+          } else if (state === 2) {
+            newGrid[y][x] = 3;
+          } else {
+            newGrid[y][x] = 0;
+          }
+        }
+      }
+    }
+
+    grid = newGrid;
+    gen++;
+  }
+
+  // ===== Rendering =====
+  function getCellColor(state) {
+    const scheme = COLOR_SCHEMES[params.colorScheme];
+    if (!scheme) return state > 0 ? '#fff' : '#0a0a0f';
+
+    if (scheme.states) {
+      if (state === 0) return scheme.dead;
+      return scheme.states[state - 1] || scheme.states[scheme.states.length - 1];
+    }
+
+    if (params.colorScheme === 'rainbow' && state > 0) {
+      const hue = (gen * 3 + state * 30) % 360;
+      return `hsl(${hue}, 80%, 60%)`;
+    }
+
+    return state > 0 ? scheme.alive : scheme.dead;
+  }
+
+  function render() {
+    const w = canvas.width, h = canvas.height;
+    const scheme = COLOR_SCHEMES[params.colorScheme];
+    ctx.fillStyle = scheme ? scheme.dead : '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+
+    const cs = params.cellSize;
+
+    // Draw cells
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (grid[y][x] > 0) {
+          ctx.fillStyle = getCellColor(grid[y][x]);
+          ctx.fillRect(x * cs, y * cs, cs - 0.5, cs - 0.5);
+        }
+      }
+    }
+
+    // Grid lines
+    if (params.showGrid && cs >= 4) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      for (let x = 0; x <= cols; x++) {
+        ctx.moveTo(x * cs, 0);
+        ctx.lineTo(x * cs, rows * cs);
+      }
+      for (let y = 0; y <= rows; y++) {
+        ctx.moveTo(0, y * cs);
+        ctx.lineTo(cols * cs, y * cs);
+      }
+      ctx.stroke();
+    }
+
+    // Update stats
+    let alive = 0;
+    for (let y = 0; y < rows; y++)
+      for (let x = 0; x < cols; x++)
+        if (grid[y][x] > 0) alive++;
+    document.getElementById('stat-gen').textContent = gen;
+    document.getElementById('stat-alive').textContent = alive;
+  }
+
+  // ===== Resize =====
+  function resize() {
+    const wrap = canvas.parentElement;
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    canvas.width = w;
+    canvas.height = h;
+    cols = Math.floor(w / params.cellSize);
+    rows = Math.floor(h / params.cellSize);
+    initGrid();
+  }
+
+  function initGrid() {
+    grid = Array.from({ length: rows }, () => new Uint8Array(cols));
+    gen = 0;
+  }
+
+  // ===== Paint =====
+  function paintAt(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = clientX - rect.left;
+    const my = clientY - rect.top;
+    const x = Math.floor(mx / params.cellSize);
+    const y = Math.floor(my / params.cellSize);
+    if (x < 0 || x >= cols || y < 0 || y >= rows) return;
+
+    const rule = getRule(params.rule);
+    if (erasing) {
+      grid[y][x] = 0;
+    } else {
+      if (rule.type === 'life') {
+        grid[y][x] = 1;
+      } else if (params.rule === 'brians') {
+        grid[y][x] = 1;
+      } else if (params.rule === 'wireworld') {
+        // Cycle: empty → conductor → head → tail
+        const current = grid[y][x];
+        grid[y][x] = current === 0 ? 3 : (current === 3 ? 1 : current === 1 ? 2 : 0);
+      }
+    }
+    render();
+  }
+
+  canvas.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    if (e.button === 2) {
+      erasing = true;
+    } else {
+      painting = true;
+    }
+    paintAt(e.clientX, e.clientY);
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (painting || erasing) paintAt(e.clientX, e.clientY);
+  });
+
+  canvas.addEventListener('mouseup', () => { painting = false; erasing = false; });
+  canvas.addEventListener('mouseleave', () => { painting = false; erasing = false; });
+
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // Touch support
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    painting = true;
+    const t = e.touches[0];
+    paintAt(t.clientX, t.clientY);
+  });
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (painting) {
+      const t = e.touches[0];
+      paintAt(t.clientX, t.clientY);
+    }
+  });
+  canvas.addEventListener('touchend', () => { painting = false; });
+
+  // ===== Animation Loop =====
+  function animate(ts) {
+    if (!running) return;
+    animId = requestAnimationFrame(animate);
+
+    const interval = 1000 / params.speed;
+    if (ts - lastTick >= interval) {
+      lastTick = ts;
+      nextGeneration();
+      render();
+    }
+  }
+
+  // ===== Controls =====
+  const btnPause = document.getElementById('btn-pause');
+  const btnStep = document.getElementById('btn-step');
+  const btnRandom = document.getElementById('btn-random');
+  const btnClear = document.getElementById('btn-clear');
+
+  function updatePauseBtn() {
+    btnPause.textContent = running ? '⏸ Pause' : '▶ Play';
+  }
+
+  btnPause.addEventListener('click', () => {
+    running = !running;
+    updatePauseBtn();
+    if (running) {
+      lastTick = performance.now();
+      animId = requestAnimationFrame(animate);
+    } else if (animId) {
+      cancelAnimationFrame(animId);
+    }
+  });
+
+  btnStep.addEventListener('click', () => {
+    running = false;
+    updatePauseBtn();
+    nextGeneration();
+    render();
+  });
+
+  btnRandom.addEventListener('click', randomize);
+  btnClear.addEventListener('click', () => {
+    running = false;
+    updatePauseBtn();
+    initGrid();
+    render();
+  });
+
+  // Sliders
+  function bindSlider(id, param, valId) {
+    const el = document.getElementById(id);
+    const valEl = document.getElementById(valId);
+    el.addEventListener('input', () => {
+      params[param] = parseInt(el.value);
+      valEl.textContent = params[param];
+      if (param === 'cellSize') {
+        resize();
+        render();
+      }
+    });
+  }
+
+  bindSlider('ctrl-speed', 'speed', 'val-speed');
+  bindSlider('ctrl-cellsize', 'cellSize', 'val-cellsize');
+  bindSlider('ctrl-fill', 'fill', 'val-fill');
+
+  // Rule select
+  document.getElementById('ctrl-rule').addEventListener('change', (e) => {
+    params.rule = e.target.value;
+    // Update color scheme hint
+    if (params.rule === 'brians') {
+      selectColorScheme('brian');
+    } else if (params.rule === 'wireworld') {
+      selectColorScheme('wire');
+    } else if (['brian', 'wire'].includes(params.colorScheme)) {
+      selectColorScheme('classic');
+    }
+    updatePresets();
+    initGrid();
+    render();
+  });
+
+  // Toggles
+  document.getElementById('toggle-grid').addEventListener('click', function() {
+    params.showGrid = !params.showGrid;
+    this.classList.toggle('active', params.showGrid);
+    render();
+  });
+  document.getElementById('toggle-wrap').addEventListener('click', function() {
+    params.wrap = !params.wrap;
+    this.classList.toggle('active', params.wrap);
+  });
+
+  // ===== Color Swatches =====
+  function buildSwatches() {
+    const container = document.getElementById('color-swatches');
+    const swatchColors = {
+      classic: '#7eb8ff', neon: '#ff3366', forest: '#4ade80',
+      fire: '#f59e0b', purple: '#a855f7', ice: '#67e8f9',
+      rainbow: 'linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f)',
+      brian: '#7eb8ff', wire: '#f59e0b',
+    };
+
+    Object.keys(swatchColors).forEach(name => {
+      const sw = document.createElement('div');
+      sw.className = 'color-swatch' + (name === params.colorScheme ? ' active' : '');
+      sw.dataset.scheme = name;
+      if (swatchColors[name].includes('gradient')) {
+        sw.style.background = swatchColors[name];
+      } else {
+        sw.style.background = swatchColors[name];
+      }
+      sw.title = name;
+      sw.addEventListener('click', () => selectColorScheme(name));
+      container.appendChild(sw);
+    });
+  }
+
+  function selectColorScheme(name) {
+    params.colorScheme = name;
+    document.querySelectorAll('.color-swatch').forEach(sw => {
+      sw.classList.toggle('active', sw.dataset.scheme === name);
+    });
+    render();
+  }
+
+  // ===== Presets =====
+  const PRESETS = {
+    life: {
+      'Glider': [[1,0],[2,1],[0,2],[1,2],[2,2]],
+      'Pulsar': null, // built-in pattern
+      'Acorn': [[1,0],[3,1],[0,2],[1,2],[4,2],[5,2],[6,2]],
+      'RPentomino': [[1,0],[2,0],[0,1],[1,1],[1,2]],
+      'Diehard': [[6,0],[0,1],[1,1],[1,2],[5,2],[6,2],[7,2]],
+      'Gosper Gun': null, // complex pattern
+    },
+    highlife: {
+      'Replicator': [[0,0],[1,0],[2,0],[2,1],[2,2],[1,2]],
+      'Blinker': [[0,0],[1,0],[2,0]],
+      'Glider': [[1,0],[2,1],[0,2],[1,2],[2,2]],
+      'Toad': [[1,0],[2,0],[3,0],[0,1],[1,1],[2,1]],
+    },
+    daynight: {
+      'Blinker': [[0,0],[1,0],[2,0]],
+      'Cross': [[2,0],[2,1],[0,2],[1,2],[2,2],[3,2],[4,2],[2,3],[2,4]],
+      'Glider': [[1,0],[2,1],[0,2],[1,2],[2,2]],
+      'Block': [[0,0],[1,0],[0,1],[1,1]],
+    },
+    seeds: {
+      'Blinker': [[0,0],[1,0],[2,0]],
+      'Cross': [[2,0],[2,1],[0,2],[1,2],[2,2],[3,2],[4,2],[2,3],[2,4]],
+      'Diamond': [[2,0],[1,1],[2,1],[3,1],[0,2],[1,2],[2,2],[3,2],[4,2],[1,3],[2,3],[3,3],[2,4]],
+      'Scattered': null,
+    },
+    brians: {
+      'Spark': [[1,0],[2,0],[0,1],[2,1],[1,2]],
+      'Ring': [[2,0],[3,0],[1,1],[4,1],[0,2],[5,2],[0,3],[5,3],[1,4],[4,4],[2,5],[3,5]],
+      'Cluster': [[0,0],[1,0],[2,0],[0,1],[2,1],[0,2],[1,2],[2,2]],
+      'Glider': [[1,0],[2,1],[0,2],[1,2],[2,2]],
+    },
+    wireworld: {
+      'Diode': null,
+      'Clock': null,
+      'OR Gate': null,
+      'Cross': [[2,0],[2,1],[0,2],[1,2],[2,2],[3,2],[4,2],[2,3],[2,4]],
+    },
+  };
+
+  // Pulsar (19P4H1) - 13 cells around center
+  const PULSAR_OFFSETS = [
+    // Top arm
+    [-4,-3],[-3,-3],[-2,-3], [2,-3],[3,-3],[4,-3],
+    [-4,-1],[-3,-1],[-2,-1], [2,-1],[3,-1],[4,-1],
+    [-1,-4],[-1,-3],[-1,-2], [1,-4],[1,-3],[1,-2],
+    // Bottom arm (symmetric)
+    [-4,3],[-3,3],[-2,3], [2,3],[3,3],[4,3],
+    [-4,1],[-3,1],[-2,1], [2,1],[3,1],[4,1],
+    [-1,4],[-1,3],[-1,2], [1,4],[1,3],[1,2],
+  ];
+
+  // Gosper Glider Gun
+  const GOSPER_OFFSETS = [
+    [0,4],[0,5],[1,4],[1,5],
+    [10,3],[10,4],[10,5],[11,2],[11,6],[12,1],[12,7],[13,1],[13,7],
+    [14,4],[15,2],[15,6],[16,3],[16,4],[16,5],[17,4],
+    [20,1],[20,2],[20,3],[21,1],[21,2],[21,3],[22,0],[22,4],
+    [24,0],[24,4],[24,-1],[24,5],
+    [34,2],[34,3],[35,2],[35,3],
+  ];
+
+  function placePattern(pattern, offsetX, offsetY) {
+    if (!pattern) return;
+    pattern.forEach(([dx, dy]) => {
+      const x = offsetX + dx;
+      const y = offsetY + dy;
+      if (x >= 0 && x < cols && y >= 0 && y < rows) {
+        const rule = getRule(params.rule);
+        grid[y][x] = rule.type === 'life' ? 1 : (params.rule === 'wireworld' ? 3 : 1);
+      }
+    });
+  }
+
+  function loadPreset(name) {
+    const presets = PRESETS[params.rule] || {};
+    const cx = Math.floor(cols / 2);
+    const cy = Math.floor(rows / 2);
+
+    running = false;
+    updatePauseBtn();
+    initGrid();
+
+    if (name === 'Gosper Gun') {
+      placePattern(GOSPER_OFFSETS, cx - 17, cy - 2);
+    } else if (name === 'Pulsar') {
+      placePattern(PULSAR_OFFSETS, cx, cy);
+    } else if (name === 'Scattered') {
+      // Random scatter for seeds
+      randomize();
+      return;
+    } else if (name === 'Diode') {
+      // Wireworld diode
+      const offsets = [
+        [0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[7,1],[8,1],
+        [0,2],[8,2],
+        [0,3],[1,3],[2,3],[3,3],[4,3],[5,3],[6,3],[7,3],[8,3],
+      ];
+      offsets.forEach(([dx, dy]) => {
+        const x = cx - 4 + dx, y = cy - 1 + dy;
+        if (x >= 0 && x < cols && y >= 0 && y < rows) grid[y][x] = 3;
+      });
+      // Set electron head
+      if (cx - 4 >= 0 && cy >= 0 && cy < rows) grid[cy][cx - 4] = 1;
+    } else if (name === 'Clock') {
+      // Wireworld clock
+      const offsets = [
+        [0,0],[1,0],[2,0],[3,0],
+        [0,1],[3,1],
+        [0,2],[1,2],[2,2],[3,2],
+        [5,0],[5,1],[5,2],
+        [6,0],[6,2],
+        [7,0],[7,1],[7,2],
+      ];
+      offsets.forEach(([dx, dy]) => {
+        const x = cx - 3 + dx, y = cy - 1 + dy;
+        if (x >= 0 && x < cols && y >= 0 && y < rows) grid[y][x] = 3;
+      });
+      // Seed head
+      if (cx - 3 >= 0 && cy - 1 >= 0) grid[cy - 1][cx - 3] = 1;
+    } else if (name === 'OR Gate') {
+      // Wireworld OR gate
+      const offsets = [
+        // Input A
+        [0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],
+        // Junction
+        [6,1],[6,2],
+        [7,2],[8,2],[9,2],[10,2],[11,2],[12,2],
+        // Output
+        [12,3],[12,4],[13,4],[14,4],
+        // Input B
+        [0,4],[1,4],[2,4],[3,4],[4,4],[5,4],[6,4],
+      ];
+      offsets.forEach(([dx, dy]) => {
+        const x = cx - 6 + dx, y = cy - 2 + dy;
+        if (x >= 0 && x < cols && y >= 0 && y < rows) grid[y][x] = 3;
+      });
+      // Seed electrons
+      if (cx - 6 >= 0 && cy - 2 >= 0) grid[cy - 2][cx - 6] = 1;
+      if (cx - 6 >= 0 && cy + 2 < rows) grid[cy + 2][cx - 6] = 1;
+    } else {
+      const pattern = presets[name];
+      if (pattern) {
+        placePattern(pattern, cx, cy);
+      }
+    }
+
+    render();
+  }
+
+  function buildPresets() {
+    const container = document.getElementById('preset-grid');
+    container.innerHTML = '';
+    const presets = PRESETS[params.rule] || {};
+    Object.keys(presets).forEach(name => {
+      const btn = document.createElement('button');
+      btn.className = 'preset-btn';
+      btn.textContent = name;
+      btn.addEventListener('click', () => loadPreset(name));
+      container.appendChild(btn);
+    });
+  }
+
+  function updatePresets() {
+    buildPresets();
+  }
+
+  // ===== Randomize =====
+  function randomize() {
+    initGrid();
+    const rule = getRule(params.rule);
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (Math.random() * 100 < params.fill) {
+          if (rule.type === 'life') {
+            grid[y][x] = 1;
+          } else if (params.rule === 'brians') {
+            grid[y][x] = Math.random() < 0.5 ? 1 : 2;
+          } else if (params.rule === 'wireworld') {
+            grid[y][x] = Math.random() < 0.6 ? 3 : (Math.random() < 0.1 ? 1 : 0);
+          }
+        }
+      }
+    }
+    render();
+  }
+
+  // ===== Snapshot =====
+  document.getElementById('btn-snapshot').addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = `cellular-automata-${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  // ===== Keyboard shortcuts integration =====
+  window.shortcuts_random = randomize;
+  window.shortcuts_redraw = () => { initGrid(); render(); };
+  window.shortcuts_toggle = () => { btnPause.click(); };
+
+  // ===== Share =====
+  window.getShareParams = function () {
+    return {
+      rule: params.rule,
+      speed: params.speed,
+      cellSize: params.cellSize,
+      fill: params.fill,
+      showGrid: params.showGrid,
+      wrap: params.wrap,
+      colorScheme: params.colorScheme,
+    };
+  };
+
+  window.applyShareParams = function (s) {
+    Object.keys(s).forEach(k => { if (k in params) params[k] = s[k]; });
+    document.getElementById('ctrl-rule').value = params.rule;
+    document.getElementById('ctrl-speed').value = params.speed;
+    document.getElementById('val-speed').textContent = params.speed;
+    document.getElementById('ctrl-cellsize').value = params.cellSize;
+    document.getElementById('val-cellsize').textContent = params.cellSize;
+    document.getElementById('ctrl-fill').value = params.fill;
+    document.getElementById('val-fill').textContent = params.fill;
+    document.getElementById('toggle-grid').classList.toggle('active', params.showGrid);
+    document.getElementById('toggle-wrap').classList.toggle('active', params.wrap);
+    selectColorScheme(params.colorScheme);
+    updatePresets();
+    resize();
+    render();
+  };
+
+  // ===== Init =====
+  buildSwatches();
+  buildPresets();
+  resize();
+  randomize();
+  render();
+
+  window.addEventListener('resize', () => { resize(); render(); });
+})();
+</script>
+<script src="/share.js"></script>
+<script src="/shortcuts.js"></script>
+</body>
+</html>

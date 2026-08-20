@@ -78,6 +78,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/noise' || urlPath === '/noise/') {
     urlPath = '/perlin.html';
   }
+  // Route /cellular to cellular.html
+  if (urlPath === '/cellular' || urlPath === '/cellular/') {
+    urlPath = '/cellular.html';
+  }
 
   if (urlPath === '/') urlPath = '/index.html';
 
