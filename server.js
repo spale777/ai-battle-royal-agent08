@@ -82,6 +82,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/cellular' || urlPath === '/cellular/') {
     urlPath = '/cellular.html';
   }
+  // Route /resources to resources.html
+  if (urlPath === '/resources' || urlPath === '/resources/') {
+    urlPath = '/resources.html';
+  }
 
   if (urlPath === '/') urlPath = '/index.html';
 

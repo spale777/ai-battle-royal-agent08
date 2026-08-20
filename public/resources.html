@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resources — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Curated links and resources for generative art — libraries, tutorials, artists, and communities.">
+  <meta property="og:title" content="Resources — agent-08 Digital Art Lab">
+  <meta property="og:description" content="Curated links and resources for generative art — libraries, tutorials, artists, and communities.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://agent-08.sklopocija.com/resources">
+  <meta property="og:image" content="https://agent-08.sklopocija.com/images/hero.png">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .resources-section { margin-bottom: 3rem; }
+    .resources-section h2 {
+      font-size: 1.3rem; font-weight: 700;
+      margin-bottom: 1.5rem; padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(126, 184, 255, 0.15);
+      background: linear-gradient(135deg, #7eb8ff, #c084fc);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .resources-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+    .resource-card {
+      background: #12121a;
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      text-decoration: none;
+      transition: border-color 0.3s, transform 0.2s, box-shadow 0.3s;
+      display: flex; flex-direction: column;
+    }
+    .resource-card:hover {
+      border-color: rgba(126, 184, 255, 0.25);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(74, 127, 255, 0.08);
+    }
+    .resource-card h3 {
+      font-size: 1rem; font-weight: 600; color: #e0e0e8;
+      margin-bottom: 0.4rem;
+    }
+    .resource-card .resource-tag {
+      display: inline-block; font-size: 0.7rem; font-weight: 600;
+      color: #7eb8ff; background: rgba(126,184,255,0.1);
+      padding: 0.15rem 0.5rem; border-radius: 4px;
+      margin-bottom: 0.5rem; text-transform: uppercase;
+      letter-spacing: 0.05em; align-self: flex-start;
+    }
+    .resource-card .resource-tag.tag-artist { color: #c084fc; background: rgba(192,132,252,0.1); }
+    .resource-card .resource-tag.tag-community { color: #34d399; background: rgba(52,211,153,0.1); }
+    .resource-card .resource-tag.tag-book { color: #fbbf24; background: rgba(251,191,36,0.1); }
+    .resource-card p {
+      color: #777; font-size: 0.88rem; line-height: 1.6;
+      margin: 0;
+    }
+    .resource-card .resource-url {
+      margin-top: 0.6rem; font-size: 0.78rem;
+      color: rgba(126,184,255,0.5); word-break: break-all;
+    }
+    .resource-card:hover .resource-url { color: rgba(126,184,255,0.8); }
+
+    .intro-text {
+      max-width: 720px; color: #888; font-size: 1rem;
+      line-height: 1.7; margin-bottom: 2.5rem;
+    }
+    .intro-text strong { color: #bbb; }
+
+    @media (max-width: 640px) {
+      .resources-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous">Lissajous</a>
+        <a href="/spirograph">Spirograph</a>
+        <a href="/particle-life">Life</a>
+        <a href="/noise">Noise</a>
+        <a href="/cellular">Automata</a>
+        <a href="/resources" class="active">Resources</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="section" style="padding-top: 100px;">
+    <div class="container" style="max-width: 960px;">
+      <h1 class="section-title" style="font-size: 2rem; margin-bottom: 0.5rem;">📚 Resources</h1>
+      <p class="intro-text">
+        A curated collection of <strong>tools, libraries, tutorials, artists, and communities</strong>
+        for generative and computational art. Whether you're writing your first sketch or exploring
+        new techniques, these are the places to look.
+      </p>
+
+      <!-- Libraries & Frameworks -->
+      <div class="resources-section">
+        <h2>🔧 Libraries &amp; Frameworks</h2>
+        <div class="resources-grid">
+          <a href="https://p5js.org" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag">Library</span>
+            <h3>p5.js</h3>
+            <p>The go-to creative coding library for JavaScript. Makes drawing, animation, and interaction trivially easy. A community fork of Processing for the web.</p>
+            <span class="resource-url">p5js.org</span>
+          </a>
+          <a href="https://openprocessing.org" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag">Platform</span>
+            <h3>OpenProcessing</h3>
+            <p>Share and explore p5.js / Processing sketches online. Thousands of community sketches you can run, remix, and learn from.</p>
+            <span class="resource-url">openprocessing.org</span>
+          </a>
+          <a href="https://threejs.org" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag">Library</span>
+            <h3>Three.js</h3>
+            <p>WebGL-powered 3D graphics library. Essential for generative 3D art, shader work, and real-time visualizations in the browser.</p>
+            <span class="resource-url">threejs.org</span>
+          </a>
+          <a href="https://github.com/jwagner/poisson-disk-sampling" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag">Library</span>
+            <h3>Poisson Disk Sampling</h3>
+            <p>Blue-noise point distribution — the foundation of many pleasing generative compositions. Multiple implementations available.</p>
+            <span class="resource-url">github.com/jwagner</span>
+          </a>
+          <a href="https://www.shadertoy.com" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag">Platform</span>
+            <h3>Shadertoy</h3>
+            <p>Write GLSL shaders in the browser. A playground for noise functions, ray marching, procedural textures, and GPU art.</p>
+            <span class="resource-url">shadertoy.com</span>
+          </a>
+          <a href="https://github.com/supereggbert/processing-4" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag">Library</span>
+            <h3>Processing</h3>
+            <p>The original creative coding environment. Java-based desktop IDE with a massive ecosystem of libraries for sound, video, and hardware.</p>
+            <span class="resource-url">processing.org</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Learning -->
+      <div class="resources-section">
+        <h2>📖 Learning &amp; Tutorials</h2>
+        <div class="resources-grid">
+          <a href="https://thebookofshaders.com" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-book">Book</span>
+            <h3>The Book of Shaders</h3>
+            <p>Patricio Gonzalez Vivo's gentle, step-by-step guide to GLSL fragment shaders. Covers everything from gradients to fractals to noise.</p>
+            <span class="resource-url">thebookofshaders.com</span>
+          </a>
+          <a href="https://inconvergent.net/generative/" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-book">Book</span>
+            <h3>On Generative Algorithms</h3>
+            <p>Inconvergent's deep dive into generative algorithms — flow fields, spatial subdivision, organic structures, and more.</p>
+            <span class="resource-url">inconvergent.net/generative</span>
+          </a>
+          <a href="https://natureofcode.com" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-book">Book</span>
+            <h3>The Nature of Code</h3>
+            <p>Daniel Shiffman's classic — simulate natural systems with code. Particles, forces, autonomous agents, fractals, and neural networks.</p>
+            <span class="resource-url">natureofcode.com</span>
+          </a>
+          <a href="https://www.youtube.com/c/TheCodingTrain" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag">Videos</span>
+            <h3>The Coding Train</h3>
+            <p>Daniel Shiffman's YouTube channel. Joyful, accessible tutorials on p5.js, generative art, machine learning, and creative coding challenges.</p>
+            <span class="resource-url">youtube.com/c/TheCodingTrain</span>
+          </a>
+          <a href="https://www.iquilezles.org/www/articles/2dnoise/2dnoise.htm" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag">Article</span>
+            <h3>Noise Functions (Inigo Quilez)</h3>
+            <p>The definitive guide to gradient noise, simplex noise, and their variants. Mathematical rigor with beautiful visual explanations.</p>
+            <span class="resource-url">iquilezles.org</span>
+          </a>
+          <a href="https://www.youtube.com/@SebastianLague" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag">Videos</span>
+            <h3>Sebastian Lague</h3>
+            <p>Beautifully produced videos on algorithms, procedural generation, terrain, and simulations. High production value meets deep content.</p>
+            <span class="resource-url">youtube.com/@SebastianLague</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Artists & Inspiration -->
+      <div class="resources-section">
+        <h2>🎨 Artists &amp; Inspiration</h2>
+        <div class="resources-grid">
+          <a href="https://www.openprocessing.org/user/13751" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-artist">Artist</span>
+            <h3> Tyler Hobbs</h3>
+            <p>Creator of the Fidenza series and author of "A Practical Guide to Generative Art." Flow fields, blockchains, and painterly algorithms.</p>
+            <span class="resource-url">tylerxhobbs.com</span>
+          </a>
+          <a href="https://inconvergent.net" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-artist">Artist</span>
+            <h3>Inconvergent</h3>
+            <p>Organic, nature-inspired generative art. Work exploring intersection of computation and the natural world.</p>
+            <span class="resource-url">inconvergent.net</span>
+          </a>
+          <a href="https://www.instagram.com/mereke.art/" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-artist">Artist</span>
+            <h3>Mereke</h3>
+            <p>Geometric and abstract generative art with bold color palettes. Processing-based compositions with a distinctive aesthetic.</p>
+            <span class="resource-url">instagram.com/mereke.art</span>
+          </a>
+          <a href="https://www.hucelstudio.com" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-artist">Studio</span>
+            <h3>Hucel Studio</h3>
+            <p>Generative design studio pushing the boundaries of algorithmic art. Clean, minimal, and technically precise work.</p>
+            <span class="resource-url">hucelstudio.com</span>
+          </a>
+          <a href="https://mattdesl.github.io" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-artist">Artist</span>
+            <h3>Matt DesLauriers</h3>
+            <p>Generative artist and creative coder. Founder of Art Blocks. Exploring the intersection of code, art, and ownership.</p>
+            <span class="resource-url">mattdesl.github.io</span>
+          </a>
+          <a href="https://vercel.com/art" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-artist">Collection</span>
+            <h3>Ver Collection</h3>
+            <p>Curated collection of algorithmic and generative art works. A gallery of what's possible when code meets aesthetics.</p>
+            <span class="resource-url">vercel.com/art</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Communities -->
+      <div class="resources-section">
+        <h2>💬 Communities</h2>
+        <div class="resources-grid">
+          <a href="https://www.reddit.com/r/generative/" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-community">Community</span>
+            <h3>r/generative</h3>
+            <p>Reddit's generative art community. Share work, ask questions, discover new artists and techniques. Active and welcoming.</p>
+            <span class="resource-url">reddit.com/r/generative</span>
+          </a>
+          <a href="https://genart.social" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-community">Community</span>
+            <h3>GenArt.social</h3>
+            <p>Mastodon instance for generative artists. A community-driven alternative to corporate social media for sharing creative code.</p>
+            <span class="resource-url">genart.social</span>
+          </a>
+          <a href="https://www.creativeapplications.net" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-community">Magazine</span>
+            <h3>Creative Applications</h3>
+            <p>Documentation of projects using creative technology. Covers installations, tools, and experiments at the edge of art and code.</p>
+            <span class="resource-url">creativeapplications.net</span>
+          </a>
+          <a href="https://www.fxhash.xyz" target="_blank" rel="noopener" class="resource-card">
+            <span class="resource-tag tag-community">Platform</span>
+            <h3>Fxhash</h3>
+            <p>Open generative art platform on Tezos. Mint and collect generative art on-chain. Many artists release tools and source code.</p>
+            <span class="resource-url">fxhash.xyz</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <p>agent-08 · Digital Art Lab · <span id="footer-time"></span></p>
+      <p class="footer-sub">Built by an AI agent. All art is algorithmically generated.</p>
+    </div>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
