@@ -80,6 +80,10 @@
       border-color: rgba(126,184,255,0.3);
       color: #7eb8ff;
     }
+    .preset-btn.active {
+      background: rgba(126,184,255,0.2);
+      border-color: #7eb8ff; color: #7eb8ff;
+    }
 
     .btn {
       padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600;
@@ -183,6 +187,17 @@
 
       <h3>Points</h3>
       <div class="control-group">
+        <div class="control-label">Distribution</div>
+        <div class="preset-grid" id="dist-grid">
+          <button class="preset-btn active" data-dist="random">Random</button>
+          <button class="preset-btn" data-dist="grid">Grid</button>
+          <button class="preset-btn" data-dist="hex">Hex</button>
+          <button class="preset-btn" data-dist="spiral">Spiral</button>
+          <button class="preset-btn" data-dist="rings">Rings</button>
+          <button class="preset-btn" data-dist="blue">Blue Noise</button>
+        </div>
+      </div>
+      <div class="control-group">
         <div class="control-label">Count <span class="val" id="v-count">30</span></div>
         <input type="range" id="point-count" min="3" max="300" value="30" step="1">
       </div>
@@ -221,6 +236,7 @@
       <h3>Actions</h3>
       <div class="btn-row">
         <button class="btn btn-secondary" id="btn-snapshot">📷 Save PNG<kbd style="margin-left:4px;font-size:0.6rem;opacity:0.4;background:none;border:none;padding:0;color:inherit;">S</kbd></button>
+        <button class="btn btn-secondary" id="btn-svg">⬡ SVG</button>
         <button class="btn btn-secondary" id="btn-share">🔗 Copy Link<kbd style="margin-left:4px;font-size:0.6rem;opacity:0.4;background:none;border:none;padding:0;color:inherit;">C</kbd></button>
       </div>
 
@@ -262,6 +278,7 @@
     let animId = null;
     let currentPalette = 0;
     let jitterSteps = 0;
+    let currentDistribution = 'random';
 
     // ── Palettes ─────────────────────────────────────────────────
     const PALETTES = [
@@ -442,6 +459,122 @@
       return { cells, triangles: tris };
     }
 
+    // ── Sutherland-Hodgman polygon clipping ─────────────────────
+    function clipPolygonToRect(poly, left, top, right, bottom) {
+      if (!poly || poly.length < 3) return poly || [];
+
+      function clipEdge(poly, edge) {
+        if (poly.length === 0) return [];
+        const result = [];
+        for (let i = 0; i < poly.length; i++) {
+          const current = poly[i];
+          const next = poly[(i + 1) % poly.length];
+          const currInside = isInside(current, edge);
+          const nextInside = isInside(next, edge);
+
+          if (currInside) {
+            result.push(current);
+            if (!nextInside) {
+              const ix = intersect(current, next, edge);
+              if (ix) result.push(ix);
+            }
+          } else if (nextInside) {
+            const ix = intersect(current, next, edge);
+            if (ix) result.push(ix);
+          }
+        }
+        return result;
+      }
+
+      function isInside(p, edge) {
+        switch (edge) {
+          case 'left':   return p.x >= left;
+          case 'right':  return p.x <= right;
+          case 'top':    return p.y >= top;
+          case 'bottom': return p.y <= bottom;
+        }
+        return true;
+      }
+
+      function intersect(p1, p2, edge) {
+        var dx = p2.x - p1.x, dy = p2.y - p1.y;
+        var t;
+        switch (edge) {
+          case 'left':
+            if (Math.abs(dx) < 1e-10) return null;
+            t = (left - p1.x) / dx;
+            break;
+          case 'right':
+            if (Math.abs(dx) < 1e-10) return null;
+            t = (right - p1.x) / dx;
+            break;
+          case 'top':
+            if (Math.abs(dy) < 1e-10) return null;
+            t = (top - p1.y) / dy;
+            break;
+          case 'bottom':
+            if (Math.abs(dy) < 1e-10) return null;
+            t = (bottom - p1.y) / dy;
+            break;
+          default:
+            return null;
+        }
+        return { x: p1.x + t * dx, y: p1.y + t * dy };
+      }
+
+      var result = poly;
+      var edges = ['left', 'right', 'top', 'bottom'];
+      for (var ei = 0; ei < edges.length; ei++) {
+        result = clipEdge(result, edges[ei]);
+      }
+      return result;
+    }
+
+    // ── Boundary point generation ────────────────────────────────
+    function addBoundaryPoints(origPts) {
+      var allPts = origPts.map(function(p) { return { x: p.x, y: p.y }; });
+      var spacing = 40;
+      // Top edge (above canvas)
+      for (var x = 0; x <= W; x += spacing) {
+        allPts.push({ x: x, y: -10 });
+      }
+      // Bottom edge (below canvas)
+      for (var x2 = 0; x2 <= W; x2 += spacing) {
+        allPts.push({ x: x2, y: H + 10 });
+      }
+      // Left edge
+      for (var y = 0; y <= H; y += spacing) {
+        allPts.push({ x: -10, y: y });
+      }
+      // Right edge
+      for (var y2 = 0; y2 <= H; y2 += spacing) {
+        allPts.push({ x: W + 10, y: y2 });
+      }
+      return allPts;
+    }
+
+    // ── Voronoi with boundary clipping ───────────────────────────
+    function computeVoronoiWithBoundary(origPts) {
+      var allPts = addBoundaryPoints(origPts);
+      var result = computeVoronoi(allPts);
+      var n = origPts.length;
+      var clippedCells = [];
+      for (var i = 0; i < n; i++) {
+        var cell = result.cells[i];
+        if (!cell || cell.length < 3) {
+          clippedCells.push(cell || []);
+          continue;
+        }
+        var clipped = clipPolygonToRect(cell, 0, 0, W, H);
+        clippedCells.push(clipped);
+      }
+      // Filter triangles to only reference original points
+      var filteredTris = result.triangles.filter(function(t) {
+        return t.a < n && t.b < n && t.c < n;
+      });
+      return { cells: clippedCells, triangles: filteredTris };
+    }
+
     // ── Lloyd relaxation ────────────────────────────────────────
     function lloydRelax(pts) {
       const result = computeVoronoi(pts);
@@ -480,7 +613,7 @@
         workPts = lloydRelax(workPts);
       }
 
-      const result = computeVoronoi(workPts);
+      var result = showBoundary ? computeVoronoiWithBoundary(workPts) : computeVoronoi(workPts);
       voronoiCells = result.cells;
       delaunayTriangles = result.triangles;
 
@@ -562,18 +695,116 @@
       updateStats(workPts.length, jitterSteps);
     }
 
-    // ── Generate random points ──────────────────────────────────
-    function generatePoints(count) {
+    // ── Generate points ──────────────────────────────────────────
+    function generatePoints(count, distribution) {
+      var dist = distribution || currentDistribution;
       points = [];
-      const margin = 30;
-      for (let i = 0; i < count; i++) {
-        points.push({
-          x: margin + Math.random() * (W - 2 * margin),
-          y: margin + Math.random() * (H - 2 * margin),
-          vx: 0,
-          vy: 0,
-        });
+      var margin = 30;
+
+      if (dist === 'random') {
+        for (var i = 0; i < count; i++) {
+          points.push({
+            x: margin + Math.random() * (W - 2 * margin),
+            y: margin + Math.random() * (H - 2 * margin),
+            vx: 0,
+            vy: 0,
+          });
+        }
+      } else if (dist === 'grid') {
+        var cols = Math.ceil(Math.sqrt(count * W / H));
+        var rows = Math.ceil(count / cols);
+        var spacingX = cols > 1 ? (W - 2 * margin) / (cols - 1) : 0;
+        var spacingY = rows > 1 ? (H - 2 * margin) / (rows - 1) : 0;
+        for (var r = 0; r < rows; r++) {
+          for (var c = 0; c < cols; c++) {
+            if (points.length >= count) break;
+            points.push({
+              x: margin + c * spacingX,
+              y: margin + r * spacingY,
+              vx: 0,
+              vy: 0,
+            });
+          }
+        }
+      } else if (dist === 'hex') {
+        var cols2 = Math.ceil(Math.sqrt(count * W / H));
+        var rows2 = Math.ceil(count / cols2);
+        var spacingX2 = cols2 > 1 ? (W - 2 * margin) / (cols2 - 1) : 0;
+        var spacingY2 = rows2 > 1 ? (H - 2 * margin) / (rows2 - 1) : 0;
+        for (var r2 = 0; r2 < rows2; r2++) {
+          for (var c2 = 0; c2 < cols2; c2++) {
+            if (points.length >= count) break;
+            var xOff = r2 % 2 === 1 ? spacingX2 / 2 : 0;
+            var hx = margin + c2 * spacingX2 + xOff;
+            var hy = margin + r2 * spacingY2;
+            if (hx <= W - margin + spacingX2 / 2) {
+              points.push({ x: hx, y: hy, vx: 0, vy: 0 });
+            }
+          }
+        }
+      } else if (dist === 'spiral') {
+        var turns = Math.max(3, Math.min(15, Math.round(count / 5)));
+        var maxR = Math.min(W, H) * 0.45;
+        for (var si = 0; si < count; si++) {
+          var t = count > 1 ? si / (count - 1) : 0;
+          var angle = t * Math.PI * 2 * turns;
+          var sr = t * maxR;
+          points.push({
+            x: W / 2 + sr * Math.cos(angle),
+            y: H / 2 + sr * Math.sin(angle),
+            vx: 0,
+            vy: 0,
+          });
+        }
+      } else if (dist === 'rings') {
+        var maxR2 = Math.min(W, H) * 0.45;
+        var nRings = Math.max(1, Math.ceil(Math.sqrt(count / 3)));
+        for (var ring = 0; ring < nRings && points.length < count; ring++) {
+          var rr = maxR2 * (ring + 1) / nRings;
+          var ptsRemaining = count - points.length;
+          var ringTarget = Math.max(1, Math.ceil(ptsRemaining / (nRings - ring)));
+          var n = Math.min(ringTarget, ptsRemaining);
+          for (var ri = 0; ri < n; ri++) {
+            var ringAngle = (ri / n) * Math.PI * 2;
+            points.push({
+              x: W / 2 + rr * Math.cos(ringAngle),
+              y: H / 2 + rr * Math.sin(ringAngle),
+              vx: 0,
+              vy: 0,
+            });
+          }
+        }
+      } else if (dist === 'blue') {
+        // Poisson-disc / dart throwing for blue noise
+        var minDist = Math.min(W, H) / Math.sqrt(count) * 0.8;
+        var k = 30; // attempts per sample
+        for (var bi = 0; bi < count; bi++) {
+          var placed = false;
+          for (var attempt = 0; attempt < k; attempt++) {
+            var bx = margin + Math.random() * (W - 2 * margin);
+            var by = margin + Math.random() * (H - 2 * margin);
+            var valid = true;
+            for (var bp = 0; bp < points.length; bp++) {
+              var bdx = points[bp].x - bx, bdy = points[bp].y - by;
+              if (bdx * bdx + bdy * bdy < minDist * minDist) { valid = false; break; }
+            }
+            if (valid) {
+              points.push({ x: bx, y: by, vx: 0, vy: 0 });
+              placed = true;
+              break;
+            }
+          }
+          if (!placed) {
+            points.push({
+              x: margin + Math.random() * (W - 2 * margin),
+              y: margin + Math.random() * (H - 2 * margin),
+              vx: 0,
+              vy: 0,
+            });
+          }
+        }
       }
+
       draw();
     }
 
@@ -641,6 +872,17 @@
 
     canvas.addEventListener('mouseup', () => { dragging = null; });
     canvas.addEventListener('mouseleave', () => { dragging = null; });
+
+    // ── Distribution buttons ─────────────────────────────────────
+    var distGrid = document.getElementById('dist-grid');
+    distGrid.querySelectorAll('.preset-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        currentDistribution = btn.dataset.dist;
+        distGrid.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        generatePoints(+pointCount.value, currentDistribution);
+      });
+    });
 
     // ── Controls ─────────────────────────────────────────────────
     const pointCount = document.getElementById('point-count');
@@ -716,6 +958,87 @@
       link.click();
     });
 
+    // ── SVG export ───────────────────────────────────────────────
+    document.getElementById('btn-svg').addEventListener('click', function() {
+      var workPts = points;
+      for (var j = 0; j < jitterSteps; j++) {
+        workPts = lloydRelax(workPts);
+      }
+
+      var result = showBoundary ? computeVoronoiWithBoundary(workPts) : computeVoronoi(workPts);
+      var cells = result.cells;
+      var palette = PALETTES[currentPalette].colors;
+
+      var closeSvg = '<' + '/svg>';
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '">\n';
+      svg += '<rect width="100%" height="100%" fill="#0a0a0f"/>\n';
+
+      // Filled cells
+      if (displayMode === 'filled' || displayMode === 'both') {
+        for (var fi = 0; fi < cells.length; fi++) {
+          var cell = cells[fi];
+          if (!cell || cell.length < 3) continue;
+          var d = '';
+          for (var fj = 0; fj < cell.length; fj++) {
+            d += (fj === 0 ? 'M' : 'L') + cell[fj].x.toFixed(1) + ',' + cell[fj].y.toFixed(1) + ' ';
+          }
+          d += 'Z';
+          svg += '<path d="' + d + '" fill="' + palette[fi % palette.length] + '" fill-opacity="0.85"/>\n';
+        }
+      }
+
+      // Edge lines
+      if (displayMode === 'edges' || displayMode === 'both') {
+        var drawnEdges = {};
+        var stroke = displayMode === 'both' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.7)';
+        var sw = displayMode === 'both' ? 0.5 : 1;
+        for (var ei = 0; ei < cells.length; ei++) {
+          var ecell = cells[ei];
+          if (!ecell || ecell.length < 3) continue;
+          for (var ej = 0; ej < ecell.length; ej++) {
+            var v1 = ecell[ej], v2 = ecell[(ej + 1) % ecell.length];
+            var ekey = Math.min(v1.x, v2.x).toFixed(1) + ',' + Math.min(v1.y, v2.y).toFixed(1) + '|' +
+                       Math.max(v1.x, v2.x).toFixed(1) + ',' + Math.max(v1.y, v2.y).toFixed(1);
+            if (drawnEdges[ekey]) continue;
+            drawnEdges[ekey] = true;
+            svg += '<line x1="' + v1.x.toFixed(1) + '" y1="' + v1.y.toFixed(1) + '" x2="' + v2.x.toFixed(1) + '" y2="' + v2.y.toFixed(1) + '" stroke="' + stroke + '" stroke-width="' + sw + '"/>\n';
+          }
+        }
+      }
+
+      // Delaunay overlay
+      if (showDelaunay && result.triangles.length > 0) {
+        for (var di = 0; di < result.triangles.length; di++) {
+          var tri = result.triangles[di];
+          var tp = [workPts[tri.a], workPts[tri.b], workPts[tri.c]];
+          var dd = '';
+          for (var dj = 0; dj < tp.length; dj++) {
+            dd += (dj === 0 ? 'M' : 'L') + tp[dj].x.toFixed(1) + ',' + tp[dj].y.toFixed(1) + ' ';
+          }
+          dd += 'Z';
+          svg += '<path d="' + dd + '" fill="none" stroke="rgba(126,184,255,0.35)" stroke-width="0.8"/>\n';
+        }
+      }
+
+      // Seed points
+      if (displayMode === 'points' || displayMode === 'both' || workPts.length < 50) {
+        for (var pi = 0; pi < workPts.length; pi++) {
+          var pp = workPts[pi];
+          svg += '<circle cx="' + pp.x.toFixed(1) + '" cy="' + pp.y.toFixed(1) + '" r="3" fill="#fff" stroke="rgba(0,0,0,0.5)" stroke-width="1"/>\n';
+        }
+      }
+
+      svg += closeSvg;
+
+      var blob = new Blob([svg], { type: 'image/svg+xml' });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.download = 'voronoi-' + Date.now() + '.svg';
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
     // Share
     document.getElementById('btn-share').addEventListener('click', () => {
       copyShareURL();
@@ -733,10 +1056,16 @@
       paletteGrid.querySelectorAll('.preset-btn').forEach((b, i) => {
         b.classList.toggle('active', i === currentPalette);
       });
+      // Randomize distribution
+      var dists = ['random', 'grid', 'hex', 'spiral', 'rings', 'blue'];
+      currentDistribution = dists[Math.floor(Math.random() * dists.length)];
+      distGrid.querySelectorAll('.preset-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.dist === currentDistribution);
+      });
       const count = 10 + Math.floor(Math.random() * 90);
       pointCount.value = count;
       vCount.textContent = count;
-      generatePoints(count);
+      generatePoints(count, currentDistribution);
     };
 
     window.shortcuts_redraw = function() {
@@ -753,6 +1082,7 @@
         boundary: showBoundary,
         speed: animSpeed,
         jitter: jitterSteps,
+        dist: currentDistribution,
         points: points.map(p => [Math.round(p.x), Math.round(p.y)]),
       };
     };
@@ -794,6 +1124,12 @@
         jitterSteps = params.jitter;
         jitterEl.value = jitterSteps;
         vJitter.textContent = jitterSteps;
+      }
+      if (params.dist !== undefined) {
+        currentDistribution = params.dist;
+        distGrid.querySelectorAll('.preset-btn').forEach(function(b) {
+          b.classList.toggle('active', b.dataset.dist === currentDistribution);
+        });
       }
       draw();
     };
