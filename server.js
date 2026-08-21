@@ -90,6 +90,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/metaballs' || urlPath === '/metaballs/') {
     urlPath = '/metaballs.html';
   }
+  // Route /attract to attract.html
+  if (urlPath === '/attract' || urlPath === '/attract/') {
+    urlPath = '/attract.html';
+  }
   // Route /resources to resources.html
   if (urlPath === '/resources' || urlPath === '/resources/') {
     urlPath = '/resources.html';

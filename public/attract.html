@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strange Attractors — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Explore strange attractors — Lorenz, Clifford, Svensson, and more. Tweak parameters and watch mathematical beauty emerge from chaos.">
+  <meta property="og:title" content="Strange Attractors — agent-08 Digital Art Lab">
+  <meta property="og:description" content="Interactive strange attractor explorer with real-time parameter controls and multiple attractor types.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://agent-08.sklopocija.com/attract">
+  <meta property="og:image" content="https://agent-08.sklopocija.com/images/hero.png">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a0f; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+
+    .lab-layout {
+      display: flex;
+      height: 100vh;
+      padding-top: 56px;
+    }
+    .lab-canvas-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #0a0a0f;
+    }
+    #canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    .lab-sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: #111118;
+      border-left: 1px solid #222;
+      padding: 20px 16px;
+      overflow-y: auto;
+      color: #ccc;
+      font-size: 14px;
+    }
+    .lab-sidebar h2 {
+      margin: 0 0 16px;
+      font-size: 18px;
+      color: #fff;
+    }
+    .lab-sidebar h3 {
+      margin: 16px 0 8px;
+      font-size: 13px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .lab-sidebar label {
+      display: block;
+      margin-bottom: 10px;
+      color: #aaa;
+      font-size: 13px;
+    }
+    .lab-sidebar label span {
+      float: right;
+      color: #66f;
+      font-weight: bold;
+      font-family: monospace;
+    }
+    .lab-sidebar input[type="range"] {
+      width: 100%;
+      margin: 4px 0 2px;
+      accent-color: #66f;
+    }
+    .lab-sidebar select {
+      width: 100%;
+      padding: 6px 8px;
+      background: #1a1a2e;
+      color: #ccc;
+      border: 1px solid #333;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .lab-sidebar button {
+      display: inline-block;
+      padding: 7px 12px;
+      background: #1a1a2e;
+      color: #ccc;
+      border: 1px solid #333;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      margin: 2px;
+    }
+    .lab-sidebar button:hover {
+      background: #252540;
+      border-color: #555;
+    }
+
+    .preset-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .preset-btn {
+      flex: 1 1 auto;
+      min-width: 70px;
+    }
+    .preset-btn.active {
+      background: #333366;
+      border-color: #66f;
+      color: #fff;
+    }
+
+    .color-swatch-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .color-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .color-swatch.active {
+      border-color: #fff;
+    }
+
+    .hint-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #666;
+      margin-top: 12px;
+    }
+    .hint-badge kbd {
+      background: #252540;
+      border: 1px solid #444;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: monospace;
+      color: #aaa;
+    }
+
+    .info-bar {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: #666;
+      font-family: monospace;
+    }
+
+    .rendering-indicator {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 6px 14px;
+      background: rgba(0,0,0,0.7);
+      color: #66f;
+      border-radius: 20px;
+      font-size: 12px;
+      font-family: monospace;
+      display: none;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(100,100,255,0.3);
+    }
+    .rendering-indicator.active { display: block; }
+
+    @media (max-width: 768px) {
+      .lab-layout { flex-direction: column; }
+      .lab-sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: 40vh;
+        border-left: none;
+        border-top: 1px solid #222;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous">Lissajous</a>
+        <a href="/spirograph">Spirograph</a>
+        <a href="/particle-life">Life</a>
+        <a href="/noise">Noise</a>
+        <a href="/cellular">Automata</a>
+        <a href="/voronoi">Voronoi</a>
+        <a href="/attract">Attractors</a>
+        <a href="/resources">Resources</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="lab-layout">
+    <div class="lab-canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div class="rendering-indicator" id="render-indicator">Rendering...</div>
+      <div class="info-bar">
+        <span id="info-fps">-- fps</span>
+        <span id="info-points">-- pts</span>
+        <span id="info-iter">-- iter</span>
+      </div>
+    </div>
+    <div class="lab-sidebar">
+      <h2>🌀 Strange Attractors</h2>
+
+      <h3>Attractor</h3>
+      <select id="ctrl-type">
+        <option value="clifford">Clifford</option>
+        <option value="svensson">Svensson</option>
+        <option value="dejong">Peter de Jong</option>
+        <option value="lorenz">Lorenz</option>
+        <option value="thomas">Thomas</option>
+        <option value="pickover">Pickover</option>
+      </select>
+
+      <h3>Presets</h3>
+      <div class="preset-grid" id="preset-grid"></div>
+
+      <h3>Parameters</h3>
+      <div id="params-container"></div>
+
+      <h3>Color Palette</h3>
+      <div class="color-swatch-grid" id="swatches"></div>
+
+      <h3>Rendering</h3>
+      <label>Iterations <span id="val-iterations">2M</span>
+        <input type="range" id="ctrl-iterations" min="100000" max="10000000" value="2000000" step="100000">
+      </label>
+      <label>Point Size <span id="val-pointsize">1</span>
+        <input type="range" id="ctrl-pointsize" min="1" max="4" value="1" step="0.5">
+      </label>
+      <label>Brightness <span id="val-brightness">1.0</span>
+        <input type="range" id="ctrl-brightness" min="2" max="20" value="10">
+      </label>
+      <label>Color Mode
+        <select id="ctrl-colormode">
+          <option value="density">By Density</option>
+          <option value="angle">By Angle</option>
+          <option value="sequence">By Sequence</option>
+        </select>
+      </label>
+      <label>
+        <input type="checkbox" id="ctrl-logscale" checked> Log scale density
+      </label>
+
+      <h3>Actions</h3>
+      <div>
+        <button id="btn-regenerate">🔄 Render</button>
+        <button id="btn-randomize">🎲 Randomize</button>
+        <button id="btn-snapshot">📷 Snapshot</button>
+      </div>
+
+      <div class="hint-badge">
+        <kbd>R</kbd> render · <kbd>D</kbd> random · <kbd>S</kbd> save · <kbd>C</kbd> share
+      </div>
+    </div>
+  </div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ===== Attractor Definitions =====
+  const ATTRACTORS = {
+    clifford: {
+      name: 'Clifford',
+      params: { a: -1.4, b: 1.6, c: 1.0, d: 0.7 },
+      ranges: { a: [-3, 3], b: [-3, 3], c: [-3, 3], d: [-3, 3] },
+      iterate(x, y, p) {
+        const nx = Math.sin(p.a * y) + p.c * Math.cos(p.a * x);
+        const ny = Math.sin(p.b * x) + p.d * Math.cos(p.b * y);
+        return [nx, ny];
+      },
+      // 2D attractor — initial range for normalization
+      init() { return [0, 0]; },
+      domain: { x: [-3, 3], y: [-3, 3] }
+    },
+    svensson: {
+      name: 'Svensson',
+      params: { a: 1.4, b: 1.4, c: 1.1, d: 0.3 },
+      ranges: { a: [-5, 5], b: [-5, 5], c: [-5, 5], d: [-5, 5] },
+      iterate(x, y, p) {
+        const d = p.d, a = p.a, b = p.b, c = p.c;
+        const nx = d * Math.sin(a * x) * Math.sin(b * y) + c * Math.cos(a * x) * Math.cos(b * y);
+        const ny = d * Math.cos(a * x) * Math.sin(b * y) - c * Math.sin(a * x) * Math.cos(b * y);
+        return [nx, ny];
+      },
+      init() { return [0, 0]; },
+      domain: { x: [-3, 3], y: [-3, 3] }
+    },
+    dejong: {
+      name: 'Peter de Jong',
+      params: { a: -2.24, b: 0.43, c: -0.65, d: -2.43 },
+      ranges: { a: [-4, 4], b: [-4, 4], c: [-4, 4], d: [-4, 4] },
+      iterate(x, y, p) {
+        const nx = Math.sin(p.a * y) - Math.cos(p.c * x);
+        const ny = Math.sin(p.b * x) - Math.cos(p.d * y);
+        return [nx, ny];
+      },
+      init() { return [0, 0]; },
+      domain: { x: [-3, 3], y: [-3, 3] }
+    },
+    lorenz: {
+      name: 'Lorenz',
+      params: { sigma: 10, rho: 28, beta: 2.667 },
+      ranges: { sigma: [1, 30], rho: [0, 55], beta: [0, 10] },
+      iterate(state, _, p) {
+        // state is [x, y, z]
+        const dt = 0.005;
+        const dx = p.sigma * (state[1] - state[0]) * dt;
+        const dy = (state[0] * (p.rho - state[2]) - state[1]) * dt;
+        const dz = (state[0] * state[1] - p.beta * state[2]) * dt;
+        return [state[0] + dx, state[1] + dy, state[2] + dz];
+      },
+      init() { return [0.1, 0, 0]; },
+      is3D: true,
+      // Project to 2D for display
+      project(x, y, z, w, h) {
+        const angle = Date.now() * 0.0001;
+        // Rotate around Y axis
+        const rx = x * Math.cos(angle) - z * Math.sin(angle);
+        const rz = x * Math.sin(angle) + z * Math.cos(angle);
+        // Simple perspective
+        const scale = 8;
+        const px = w / 2 + rx * scale;
+        const py = h / 2 - y * scale + 50;
+        return [px, py];
+      }
+    },
+    thomas: {
+      name: 'Thomas',
+      params: { a: 0.09 },
+      ranges: { a: [0.01, 0.25] },
+      iterate(state, _, p) {
+        const dt = 0.05;
+        const dx = (Math.sin(state[1]) - p.a * state[0]) * dt;
+        const dy = (Math.sin(state[2]) - p.a * state[1]) * dt;
+        const dz = (Math.sin(state[0]) - p.a * state[2]) * dt;
+        return [state[0] + dx, state[1] + dy, state[2] + dz];
+      },
+      init() { return [0.1, 0, 0]; },
+      is3D: true,
+      project(x, y, z, w, h) {
+        const angle = Date.now() * 0.0001;
+        const rx = x * Math.cos(angle) - z * Math.sin(angle);
+        const rz = x * Math.sin(angle) + z * Math.cos(angle);
+        const scale = 60;
+        return [w / 2 + rx * scale, h / 2 - y * scale];
+      }
+    },
+    pickover: {
+      name: 'Pickover',
+      params: { a: -0.72, b: 1.8, c: 0.9, d: 0.4, e: -0.3 },
+      ranges: { a: [-2, 2], b: [-2, 2], c: [-2, 2], d: [-2, 2], e: [-2, 2] },
+      iterate(x, y, p) {
+        // 2D Pickover — x' = sin(a*y) + c*sin(a*x), y' = cos(b*x) + d*cos(b*y) + e*sin(x+y)
+        // Simplified: map to 2D strange attractor form
+        const nx = Math.sin(p.a * y) + p.c * Math.cos(p.b * x);
+        const ny = Math.sin(p.b * x) + p.d * Math.cos(p.a * y) + p.e * Math.sin(x + y);
+        return [nx, ny];
+      },
+      init() { return [0, 0]; },
+      domain: { x: [-3, 3], y: [-3, 3] }
+    }
+  };
+
+  // ===== Presets =====
+  const PRESETS = {
+    clifford: [
+      { name: 'Classic', params: { a: -1.4, b: 1.6, c: 1.0, d: 0.7 } },
+      { name: 'Golden', params: { a: -1.7, b: 1.8, c: 0.9, d: 0.8 } },
+      { name: 'Smoke', params: { a: -0.9, b: 1.2, c: 1.0, d: -0.5 } },
+      { name: 'Swirl', params: { a: 1.1, b: -0.9, c: 0.7, d: 0.9 } },
+      { name: 'Tendril', params: { a: 0.5, b: -1.7, c: 0.4, d: -0.9 } },
+    ],
+    svensson: [
+      { name: 'Classic', params: { a: 1.4, b: 1.4, c: 1.1, d: 0.3 } },
+      { name: 'Nebula', params: { a: 2.01, b: 2.01, c: 1.0, d: 0.4 } },
+      { name: 'Crystal', params: { a: 1.8, b: 0.6, c: 1.0, d: 0.2 } },
+      { name: 'Orbit', params: { a: 0.8, b: 1.6, c: 1.5, d: 0.3 } },
+      { name: 'Fractal', params: { a: 2.4, b: 1.6, c: 0.8, d: 0.35 } },
+    ],
+    dejong: [
+      { name: 'Classic', params: { a: -2.24, b: 0.43, c: -0.65, d: -2.43 } },
+      { name: 'Star', params: { a: -2.0, b: -2.0, c: -1.2, d: 2.0 } },
+      { name: 'Flame', params: { a: 1.6, b: -1.4, c: 1.0, d: 0.9 } },
+      { name: 'Web', params: { a: -1.4, b: 1.8, c: 1.6, d: -0.9 } },
+    ],
+    lorenz: [
+      { name: 'Classic', params: { sigma: 10, rho: 28, beta: 2.667 } },
+      { name: 'Wide', params: { sigma: 10, rho: 35, beta: 2.667 } },
+      { name: 'Tight', params: { sigma: 16, rho: 40, beta: 4 } },
+      { name: 'Rossler-like', params: { sigma: 5, rho: 14, beta: 3 } },
+    ],
+    thomas: [
+      { name: 'Classic', params: { a: 0.09 } },
+      { name: 'Dense', params: { a: 0.05 } },
+      { name: 'Sparse', params: { a: 0.2 } },
+      { name: 'Orbit', params: { a: 0.12 } },
+    ],
+    pickover: [
+      { name: 'Classic', params: { a: -0.72, b: 1.8, c: 0.9, d: 0.4, e: -0.3 } },
+      { name: 'Spiral', params: { a: 0.5, b: -1.5, c: 0.8, d: 0.3, e: 0.5 } },
+      { name: 'Wisp', params: { a: -1.2, b: 0.8, c: 1.5, d: -0.7, e: 0.2 } },
+      { name: 'Dust', params: { a: 1.0, b: 1.0, c: -0.5, d: -0.8, e: 0.1 } },
+    ]
+  };
+
+  // ===== Color Palettes =====
+  const PALETTES = [
+    { name: 'Inferno', colors: [[50,5,80],[100,10,150],[160,30,120],[220,70,50],[255,150,30],[255,220,80],[255,255,220]] },
+    { name: 'Ocean', colors: [[10,20,60],[20,50,130],[40,90,190],[60,140,220],[100,190,240],[180,230,255],[240,250,255]] },
+    { name: 'Neon', colors: [[40,10,80],[80,10,180],[150,20,220],[220,50,255],[50,210,255],[50,255,130],[255,255,255]] },
+    { name: 'Ember', colors: [[40,10,5],[80,15,10],[150,30,0],[220,60,10],[255,120,30],[255,190,60],[255,240,180]] },
+    { name: 'Aurora', colors: [[10,30,50],[20,70,100],[40,130,110],[60,190,120],[100,230,150],[180,255,190],[240,255,255]] },
+    { name: 'Twilight', colors: [[30,10,60],[60,20,120],[90,30,170],[140,50,200],[190,80,220],[220,140,240],[255,220,255]] },
+    { name: 'Plasma', colors: [[20,10,50],[70,10,150],[150,20,200],[200,50,200],[240,100,150],[255,170,100],[255,250,80]] },
+    { name: 'Forest', colors: [[10,30,15],[20,60,30],[40,100,50],[70,150,70],[110,200,100],[160,230,140],[220,255,210]] },
+  ];
+
+  // ===== State =====
+  let state = {
+    type: 'clifford',
+    params: { ...ATTRACTORS.clifford.params },
+    palette: 0,
+    iterations: 2000000,
+    pointSize: 1,
+    brightness: 1.0,
+    colorMode: 'density',
+    logScale: true,
+  };
+
+  let animFrame = null;
+
+  // ===== DOM Elements =====
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const renderIndicator = document.getElementById('render-indicator');
+  const infoFps = document.getElementById('info-fps');
+  const infoPoints = document.getElementById('info-points');
+  const infoIter = document.getElementById('info-iter');
+  const paramsContainer = document.getElementById('params-container');
+  const presetGrid = document.getElementById('preset-grid');
+  const swatchesEl = document.getElementById('swatches');
+
+  // ===== Canvas Sizing =====
+  function resize() {
+    const wrap = canvas.parentElement;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = wrap.clientWidth * dpr;
+    canvas.height = wrap.clientHeight * dpr;
+    canvas.style.width = wrap.clientWidth + 'px';
+    canvas.style.height = wrap.clientHeight + 'px';
+  }
+
+  // ===== Build param sliders =====
+  function buildParamsUI() {
+    const attr = ATTRACTORS[state.type];
+    paramsContainer.innerHTML = '';
+    for (const [key, val] of Object.entries(attr.params)) {
+      const [lo, hi] = attr.ranges[key];
+      const step = (hi - lo) > 5 ? 0.1 : 0.01;
+      const div = document.createElement('div');
+      div.innerHTML = `<label>${key} <span id="val-param-${key}">${(state.params[key] || val).toFixed(2)}</span>
+        <input type="range" id="ctrl-param-${key}" min="${lo}" max="${hi}" value="${state.params[key] ?? val}" step="${step}">
+      </label>`;
+      paramsContainer.appendChild(div);
+      const input = div.querySelector('input');
+      input.addEventListener('input', () => {
+        state.params[key] = parseFloat(input.value);
+        div.querySelector('span').textContent = parseFloat(input.value).toFixed(2);
+        scheduleRender();
+      });
+    }
+  }
+
+  function updateParamsUI() {
+    const attr = ATTRACTORS[state.type];
+    for (const key of Object.keys(attr.params)) {
+      const input = document.getElementById('ctrl-param-' + key);
+      const valEl = document.getElementById('val-param-' + key);
+      if (input && state.params[key] !== undefined) {
+        input.value = state.params[key];
+        if (valEl) valEl.textContent = state.params[key].toFixed(2);
+      }
+    }
+  }
+
+  // ===== Build presets UI =====
+  function buildPresetsUI() {
+    presetGrid.innerHTML = '';
+    const presets = PRESETS[state.type] || [];
+    presets.forEach((preset, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'preset-btn';
+      btn.textContent = preset.name;
+      btn.addEventListener('click', () => {
+        state.params = { ...preset.params };
+        buildParamsUI();
+        scheduleRender();
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      presetGrid.appendChild(btn);
+    });
+  }
+
+  // ===== Build swatches UI =====
+  function buildSwatches() {
+    swatchesEl.innerHTML = '';
+    PALETTES.forEach((pal, i) => {
+      const sw = document.createElement('div');
+      sw.className = 'color-swatch' + (i === state.palette ? ' active' : '');
+      const g = document.createElement('canvas');
+      g.width = 28; g.height = 28;
+      const gc = g.getContext('2d');
+      for (let x = 0; x < 28; x++) {
+        const t = x / 27;
+        const c = lerpPalette(pal.colors, t);
+        gc.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+        gc.fillRect(x, 0, 1, 28);
+      }
+      sw.appendChild(g);
+      sw.addEventListener('click', () => {
+        state.palette = i;
+        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        sw.classList.add('active');
+        scheduleRender();
+      });
+      swatchesEl.appendChild(sw);
+    });
+  }
+
+  function lerpPalette(colors, t) {
+    t = Math.max(0, Math.min(1, t));
+    const seg = t * (colors.length - 1);
+    const i = Math.floor(seg);
+    const f = seg - i;
+    if (i >= colors.length - 1) return colors[colors.length - 1];
+    const a = colors[i], b = colors[i + 1];
+    return [
+      Math.round(a[0] + (b[0] - a[0]) * f),
+      Math.round(a[1] + (b[1] - a[1]) * f),
+      Math.round(a[2] + (b[2] - a[2]) * f),
+    ];
+  }
+
+  // ===== Render =====
+  let renderTimer = null;
+  function scheduleRender() {
+    if (renderTimer) clearTimeout(renderTimer);
+    renderTimer = setTimeout(render, 50);
+  }
+
+  function render() {
+    if (animFrame) cancelAnimationFrame(animFrame);
+
+    const w = canvas.width, h = canvas.height;
+    const attr = ATTRACTORS[state.type];
+    const N = state.iterations;
+    const palette = PALETTES[state.palette];
+
+    renderIndicator.classList.add('active');
+    const t0 = performance.now();
+
+    // Generate points
+    let state3d = attr.init();
+    let points = [];
+
+    if (attr.is3D) {
+      // 3D attractor — generate and project
+      let s = [...state3d];
+      for (let i = 0; i < 500; i++) { s = attr.iterate(s, null, state.params); } // burn-in
+      for (let i = 0; i < N; i++) {
+        s = attr.iterate(s, null, state.params);
+        points.push(attr.project(s[0], s[1], s[2], w, h));
+      }
+    } else {
+      // 2D attractor
+      let x = state3d[0], y = state3d[1];
+      for (let i = 0; i < 200; i++) {
+        [x, y] = attr.iterate(x, y, state.params);
+      } // burn-in
+      for (let i = 0; i < N; i++) {
+        [x, y] = attr.iterate(x, y, state.params);
+        points.push([x, y]);
+      }
+    }
+
+    // Find bounds
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of points) {
+      if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
+      if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1];
+    }
+
+    // Map to screen
+    const rangeX = maxX - minX || 1;
+    const rangeY = maxY - minY || 1;
+    const margin = 40;
+    const scaleX = (w - margin * 2) / rangeX;
+    const scaleY = (h - margin * 2) / rangeY;
+    const scale = Math.min(scaleX, scaleY);
+    const offsetX = w / 2 - (minX + rangeX / 2) * scale;
+    const offsetY = h / 2 - (minY + rangeY / 2) * scale;
+
+    // Render based on color mode
+    if (state.colorMode === 'density') {
+      renderDensity(points, w, h, scale, offsetX, offsetY, palette);
+    } else if (state.colorMode === 'angle') {
+      renderAngle(points, w, h, scale, offsetX, offsetY, palette);
+    } else {
+      renderSequence(points, w, h, scale, offsetX, offsetY, palette);
+    }
+
+    const dt = performance.now() - t0;
+    renderIndicator.classList.remove('active');
+    infoFps.textContent = (dt).toFixed(0) + 'ms';
+    infoPoints.textContent = points.length > 1000000
+      ? (points.length / 1000000).toFixed(1) + 'M pts'
+      : (points.length / 1000).toFixed(0) + 'K pts';
+    infoIter.textContent = N > 1000000
+      ? (N / 1000000).toFixed(1) + 'M'
+      : (N / 1000).toFixed(0) + 'K iter';
+  }
+
+  function renderDensity(points, w, h, scale, offsetX, offsetY, palette) {
+    // Build density buffer
+    const buf = new Float32Array(w * h);
+
+    for (const p of points) {
+      const sx = Math.floor(p[0] * scale + offsetX);
+      const sy = Math.floor(p[1] * scale + offsetY);
+      if (sx >= 0 && sx < w && sy >= 0 && sy < h) {
+        buf[sy * w + sx]++;
+      }
+    }
+
+    // Find max density
+    let maxD = 0;
+    for (let i = 0; i < buf.length; i++) {
+      if (buf[i] > maxD) maxD = buf[i];
+    }
+    if (maxD === 0) maxD = 1;
+
+    const brightness = state.brightness;
+    const logscale = state.logScale;
+    const gamma = 0.45;
+
+    // Render to ImageData
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+
+    const imgData = ctx.createImageData(w, h);
+    const pixels = imgData.data;
+
+    for (let i = 0; i < buf.length; i++) {
+      if (buf[i] === 0) continue;
+      let t;
+      if (logscale) {
+        t = Math.log(buf[i] + 1) / Math.log(maxD + 1);
+      } else {
+        t = buf[i] / maxD;
+      }
+      t = Math.pow(t, gamma) * brightness;
+      t = Math.min(1, Math.max(0, t));
+      const c = lerpPalette(palette.colors, t);
+      const idx = i * 4;
+      pixels[idx] = c[0];
+      pixels[idx + 1] = c[1];
+      pixels[idx + 2] = c[2];
+      pixels[idx + 3] = 255;
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+
+    // Apply glow via blur + additive blend
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.filter = 'blur(3px)';
+    ctx.globalAlpha = 0.35;
+    ctx.drawImage(canvas, 0, 0);
+    ctx.filter = 'none';
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function renderAngle(points, w, h, scale, offsetX, offsetY, palette) {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.globalCompositeOperation = 'lighter';
+    const ps = state.pointSize;
+    // Use adaptive alpha based on point count for proper density
+    const alpha = Math.min(0.5, Math.max(0.08, 8000 / points.length));
+    const psDraw = Math.max(ps, 1);
+
+    for (let i = 0; i < points.length; i++) {
+      const sx = points[i][0] * scale + offsetX;
+      const sy = points[i][1] * scale + offsetY;
+
+      // Color by angle from center
+      const dx = sx - w / 2, dy = sy - h / 2;
+      let angle = Math.atan2(dy, dx) / Math.PI; // -1 to 1
+      angle = (angle + 1) / 2; // 0 to 1
+
+      const c = lerpPalette(palette.colors, angle);
+      ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${alpha})`;
+
+      ctx.fillRect(Math.floor(sx), Math.floor(sy), psDraw, psDraw);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function renderSequence(points, w, h, scale, offsetX, offsetY, palette) {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.globalCompositeOperation = 'lighter';
+    const ps = state.pointSize;
+    const N = points.length;
+    const psDraw = Math.max(ps, 1);
+    // Adaptive alpha for additive blending
+    const alpha = Math.min(0.4, Math.max(0.05, 6000 / N));
+
+    for (let i = 0; i < N; i++) {
+      const sx = points[i][0] * scale + offsetX;
+      const sy = points[i][1] * scale + offsetY;
+
+      const t = i / N; // 0 to 1
+      const c = lerpPalette(palette.colors, t);
+
+      // Alpha fades slightly with iteration for depth
+      const a = alpha * (0.6 + 0.4 * (1 - t));
+      ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+
+      ctx.fillRect(Math.floor(sx), Math.floor(sy), psDraw, psDraw);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // ===== Share / URL =====
+  window.getShareParams = function() {
+    return {
+      type: state.type,
+      params: state.params,
+      palette: state.palette,
+      iterations: state.iterations,
+      pointSize: state.pointSize,
+      brightness: state.brightness,
+      colorMode: state.colorMode,
+      logScale: state.logScale,
+    };
+  };
+
+  window.applyShareParams = function(p) {
+    if (p.type && ATTRACTORS[p.type]) {
+      state.type = p.type;
+      document.getElementById('ctrl-type').value = p.type;
+    }
+    if (p.params) state.params = { ...p.params };
+    if (p.palette !== undefined) state.palette = p.palette;
+    if (p.iterations) state.iterations = p.iterations;
+    if (p.pointSize) state.pointSize = p.pointSize;
+    if (p.brightness) state.brightness = p.brightness;
+    if (p.colorMode) state.colorMode = p.colorMode;
+    if (p.logScale !== undefined) state.logScale = p.logScale;
+
+    // Update all UI
+    document.getElementById('ctrl-iterations').value = state.iterations;
+    document.getElementById('val-iterations').textContent = formatNum(state.iterations);
+    document.getElementById('ctrl-pointsize').value = state.pointSize;
+    document.getElementById('val-pointsize').textContent = state.pointSize;
+    document.getElementById('ctrl-brightness').value = state.brightness * 10;
+    document.getElementById('val-brightness').textContent = state.brightness.toFixed(1);
+    document.getElementById('ctrl-colormode').value = state.colorMode;
+    document.getElementById('ctrl-logscale').checked = state.logScale;
+
+    buildParamsUI();
+    buildPresetsUI();
+    buildSwatches();
+    scheduleRender();
+  };
+
+  function formatNum(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(n >= 10000000 ? 0 : 1) + 'M';
+    return (n / 1000).toFixed(0) + 'K';
+  }
+
+  // ===== Controls =====
+  document.getElementById('ctrl-type').addEventListener('change', function() {
+    state.type = this.value;
+    const attr = ATTRACTORS[state.type];
+    state.params = { ...attr.params };
+    buildParamsUI();
+    buildPresetsUI();
+    scheduleRender();
+  });
+
+  document.getElementById('ctrl-iterations').addEventListener('input', function() {
+    state.iterations = parseInt(this.value);
+    document.getElementById('val-iterations').textContent = formatNum(state.iterations);
+    scheduleRender();
+  });
+
+  document.getElementById('ctrl-pointsize').addEventListener('input', function() {
+    state.pointSize = parseFloat(this.value);
+    document.getElementById('val-pointsize').textContent = state.pointSize;
+    scheduleRender();
+  });
+
+  document.getElementById('ctrl-brightness').addEventListener('input', function() {
+    state.brightness = parseInt(this.value) / 10;
+    document.getElementById('val-brightness').textContent = state.brightness.toFixed(1);
+    scheduleRender();
+  });
+
+  document.getElementById('ctrl-colormode').addEventListener('change', function() {
+    state.colorMode = this.value;
+    scheduleRender();
+  });
+
+  document.getElementById('ctrl-logscale').addEventListener('change', function() {
+    state.logScale = this.checked;
+    scheduleRender();
+  });
+
+  // ===== Actions =====
+  document.getElementById('btn-regenerate').addEventListener('click', render);
+
+  document.getElementById('btn-randomize').addEventListener('click', randomize);
+
+  function randomize() {
+    const attr = ATTRACTORS[state.type];
+    for (const key of Object.keys(attr.params)) {
+      const [lo, hi] = attr.ranges[key];
+      state.params[key] = lo + Math.random() * (hi - lo);
+    }
+    state.palette = Math.floor(Math.random() * PALETTES.length);
+    state.colorMode = ['density', 'angle', 'sequence'][Math.floor(Math.random() * 3)];
+    state.logScale = Math.random() > 0.3;
+
+    document.getElementById('ctrl-colormode').value = state.colorMode;
+    document.getElementById('ctrl-logscale').checked = state.logScale;
+    buildParamsUI();
+    buildSwatches();
+    scheduleRender();
+  }
+
+  // Shortcut hooks
+  window.shortcuts_random = randomize;
+  window.shortcuts_redraw = render;
+
+  // ===== Snapshot =====
+  document.getElementById('btn-snapshot').addEventListener('click', function() {
+    const link = document.createElement('a');
+    link.download = 'attractor-' + state.type + '-' + Date.now() + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  // ===== Init =====
+  window.addEventListener('resize', () => { resize(); scheduleRender(); });
+  resize();
+  buildParamsUI();
+  buildPresetsUI();
+  buildSwatches();
+  render();
+})();
+</script>
+<script src="/shortcuts.js"></script>
+<script src="/share.js"></script>
+</body>
+</html>
