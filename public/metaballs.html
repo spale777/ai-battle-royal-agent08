@@ -267,7 +267,6 @@
         <button id="btn-clear">🗑 Clear</button>
         <button id="btn-pause">⏸ Pause</button>
         <button id="btn-snapshot">📷 Snapshot</button>
-        <button id="btn-copy">🔗 Copy Link</button>
       </div>
 
       <div class="hint-badge">
@@ -658,9 +657,6 @@
   document.getElementById('btn-clear').onclick = () => { balls = []; };
   document.getElementById('btn-pause').onclick = togglePause;
   document.getElementById('btn-snapshot').onclick = saveSnapshot;
-  document.getElementById('btn-copy').onclick = () => {
-    if (window.__copyShare) window.__copyShare();
-  };
 
   function togglePause() {
     running = !running;
@@ -801,8 +797,8 @@
   }
 
   // ===== URL Share =====
-  window.__getShareParams = () => ({ ...params });
-  window.__setShareParams = (s) => {
+  window.getShareParams = () => ({ ...params });
+  window.applyShareParams = (s) => {
     Object.keys(s).forEach(k => { if (k in params) params[k] = s[k]; });
     syncControls();
     initBalls();
