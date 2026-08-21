@@ -86,6 +86,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/voronoi' || urlPath === '/voronoi/') {
     urlPath = '/voronoi.html';
   }
+  // Route /metaballs to metaballs.html
+  if (urlPath === '/metaballs' || urlPath === '/metaballs/') {
+    urlPath = '/metaballs.html';
+  }
   // Route /resources to resources.html
   if (urlPath === '/resources' || urlPath === '/resources/') {
     urlPath = '/resources.html';
