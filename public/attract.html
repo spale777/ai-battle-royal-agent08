@@ -35,6 +35,17 @@
       image-rendering: pixelated;
     }
 
+    .progress-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: #66f;
+      z-index: 10;
+      transition: width 0.05s linear;
+      box-shadow: 0 0 8px rgba(100,100,255,0.6);
+    }
+
     .lab-sidebar {
       width: 280px;
       min-width: 280px;
@@ -97,6 +108,10 @@
     .lab-sidebar button:hover {
       background: #252540;
       border-color: #555;
+    }
+    .lab-sidebar input[type="checkbox"] {
+      accent-color: #66f;
+      margin-right: 6px;
     }
 
     .preset-grid {
@@ -213,6 +228,7 @@
   <div class="lab-layout">
     <div class="lab-canvas-wrap">
       <canvas id="canvas"></canvas>
+      <div class="progress-bar" id="progress-bar" style="width:0%"></div>
       <div class="rendering-indicator" id="render-indicator">Rendering...</div>
       <div class="info-bar">
         <span id="info-fps">-- fps</span>
@@ -243,6 +259,12 @@
       <div class="color-swatch-grid" id="swatches"></div>
 
       <h3>Rendering</h3>
+      <label>Render Style
+        <select id="ctrl-renderstyle">
+          <option value="dots">Dots</option>
+          <option value="lines">Lines</option>
+        </select>
+      </label>
       <label>Iterations <span id="val-iterations">2M</span>
         <input type="range" id="ctrl-iterations" min="100000" max="10000000" value="2000000" step="100000">
       </label>
@@ -262,6 +284,12 @@
       <label>
         <input type="checkbox" id="ctrl-logscale" checked> Log scale density
       </label>
+      <label>
+        <input type="checkbox" id="ctrl-animate"> Animation (progressive)
+      </label>
+      <label>Anim Speed <span id="val-animspeed">10K</span>
+        <input type="range" id="ctrl-animspeed" min="1000" max="50000" value="10000" step="1000">
+      </label>
 
       <h3>Actions</h3>
       <div>
@@ -271,7 +299,7 @@
       </div>
 
       <div class="hint-badge">
-        <kbd>R</kbd> render · <kbd>D</kbd> random · <kbd>S</kbd> save · <kbd>C</kbd> share
+        <kbd>R</kbd> render · <kbd>D</kbd> random · <kbd>S</kbd> save · <kbd>C</kbd> share · <kbd>L</kbd> lines
       </div>
     </div>
   </div>
@@ -448,14 +476,19 @@
     brightness: 1.0,
     colorMode: 'density',
     logScale: true,
+    renderStyle: 'dots',
+    animate: false,
+    animSpeed: 10000,
   };
 
   let animFrame = null;
+  let animState = null; // holds progressive animation state
 
   // ===== DOM Elements =====
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
   const renderIndicator = document.getElementById('render-indicator');
+  const progressBar = document.getElementById('progress-bar');
   const infoFps = document.getElementById('info-fps');
   const infoPoints = document.getElementById('info-points');
   const infoIter = document.getElementById('info-iter');
@@ -573,22 +606,20 @@
   }
 
   function render() {
-    if (animFrame) cancelAnimationFrame(animFrame);
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    animState = null;
+    progressBar.style.width = '0%';
 
     const w = canvas.width, h = canvas.height;
     const attr = ATTRACTORS[state.type];
     const N = state.iterations;
     const palette = PALETTES[state.palette];
 
-    renderIndicator.classList.add('active');
-    const t0 = performance.now();
-
-    // Generate points
+    // Generate all points first (fast, synchronous)
     let state3d = attr.init();
     let points = [];
 
     if (attr.is3D) {
-      // 3D attractor — generate and project
       let s = [...state3d];
       for (let i = 0; i < 500; i++) { s = attr.iterate(s, null, state.params); } // burn-in
       for (let i = 0; i < N; i++) {
@@ -596,7 +627,6 @@
         points.push(attr.project(s[0], s[1], s[2], w, h));
       }
     } else {
-      // 2D attractor
       let x = state3d[0], y = state3d[1];
       for (let i = 0; i < 200; i++) {
         [x, y] = attr.iterate(x, y, state.params);
@@ -624,24 +654,213 @@
     const offsetX = w / 2 - (minX + rangeX / 2) * scale;
     const offsetY = h / 2 - (minY + rangeY / 2) * scale;
 
-    // Render based on color mode
-    if (state.colorMode === 'density') {
-      renderDensity(points, w, h, scale, offsetX, offsetY, palette);
-    } else if (state.colorMode === 'angle') {
-      renderAngle(points, w, h, scale, offsetX, offsetY, palette);
+    if (!state.animate) {
+      // Synchronous render (original behavior)
+      renderIndicator.classList.add('active');
+      const t0 = performance.now();
+
+      if (state.colorMode === 'density') {
+        if (state.renderStyle === 'lines') {
+          renderDensityLines(points, w, h, scale, offsetX, offsetY, palette);
+        } else {
+          renderDensity(points, w, h, scale, offsetX, offsetY, palette);
+        }
+      } else if (state.colorMode === 'angle') {
+        if (state.renderStyle === 'lines') {
+          renderAngleLines(points, w, h, scale, offsetX, offsetY, palette);
+        } else {
+          renderAngle(points, w, h, scale, offsetX, offsetY, palette);
+        }
+      } else {
+        if (state.renderStyle === 'lines') {
+          renderSequenceLines(points, w, h, scale, offsetX, offsetY, palette);
+        } else {
+          renderSequence(points, w, h, scale, offsetX, offsetY, palette);
+        }
+      }
+
+      const dt = performance.now() - t0;
+      renderIndicator.classList.remove('active');
+      progressBar.style.width = '100%';
+      setTimeout(() => { progressBar.style.width = '0%'; }, 300);
+      infoFps.textContent = (dt).toFixed(0) + 'ms';
+      infoPoints.textContent = points.length > 1000000
+        ? (points.length / 1000000).toFixed(1) + 'M pts'
+        : (points.length / 1000).toFixed(0) + 'K pts';
+      infoIter.textContent = N > 1000000
+        ? (N / 1000000).toFixed(1) + 'M'
+        : (N / 1000).toFixed(0) + 'K iter';
     } else {
-      renderSequence(points, w, h, scale, offsetX, offsetY, palette);
+      // Animated progressive render
+      renderIndicator.classList.add('active');
+      progressBar.style.width = '0%';
+
+      animState = {
+        points: points,
+        total: points.length,
+        rendered: 0,
+        w: w, h: h,
+        scale: scale,
+        offsetX: offsetX,
+        offsetY: offsetY,
+        palette: palette,
+        startTime: performance.now(),
+        // For density mode: accumulate into a Float32Array density buffer
+        densityBuf: state.colorMode === 'density' ? new Float32Array(w * h) : null,
+        // For angle/sequence modes: accumulate rendered points array
+        accumPoints: state.colorMode !== 'density' ? [] : null,
+        batchStart: 0,
+      };
+
+      animFrame = requestAnimationFrame(animStep);
+    }
+  }
+
+  function animStep() {
+    if (!animState) return;
+
+    const a = animState;
+    const batchSize = state.animSpeed;
+    const end = Math.min(a.batchStart + batchSize, a.total);
+    const batchPoints = a.points.slice(a.batchStart, end);
+    a.batchStart = end;
+
+    const { w, h, scale, offsetX, offsetY, palette } = a;
+
+    if (state.colorMode === 'density') {
+      // Accumulate into density buffer
+      for (const p of batchPoints) {
+        const sx = Math.floor(p[0] * scale + offsetX);
+        const sy = Math.floor(p[1] * scale + offsetY);
+        if (sx >= 0 && sx < w && sy >= 0 && sy < h) {
+          a.densityBuf[sy * w + sx]++;
+        }
+      }
+      // Re-render full density image from accumulated buffer
+      renderDensityFromBuf(a.densityBuf, w, h, palette, false);
+    } else {
+      // Accumulate points array
+      for (const p of batchPoints) {
+        a.accumPoints.push(p);
+      }
+      if (state.colorMode === 'angle') {
+        if (state.renderStyle === 'lines') {
+          renderAngleLines(a.accumPoints, w, h, scale, offsetX, offsetY, palette);
+        } else {
+          renderAngle(a.accumPoints, w, h, scale, offsetX, offsetY, palette);
+        }
+      } else {
+        if (state.renderStyle === 'lines') {
+          renderSequenceLines(a.accumPoints, w, h, scale, offsetX, offsetY, palette);
+        } else {
+          renderSequence(a.accumPoints, w, h, scale, offsetX, offsetY, palette);
+        }
+      }
     }
 
-    const dt = performance.now() - t0;
-    renderIndicator.classList.remove('active');
-    infoFps.textContent = (dt).toFixed(0) + 'ms';
-    infoPoints.textContent = points.length > 1000000
-      ? (points.length / 1000000).toFixed(1) + 'M pts'
-      : (points.length / 1000).toFixed(0) + 'K pts';
-    infoIter.textContent = N > 1000000
-      ? (N / 1000000).toFixed(1) + 'M'
-      : (N / 1000).toFixed(0) + 'K iter';
+    a.rendered = end;
+    const pct = Math.round((a.rendered / a.total) * 100);
+    const ptsStr = a.rendered > 1000000
+      ? (a.rendered / 1000000).toFixed(1) + 'M'
+      : (a.rendered / 1000).toFixed(0) + 'K';
+    const totalStr = a.total > 1000000
+      ? (a.total / 1000000).toFixed(1) + 'M'
+      : (a.total / 1000).toFixed(0) + 'K';
+    renderIndicator.textContent = pct + '% · ' + ptsStr + '/' + totalStr + ' points';
+    progressBar.style.width = pct + '%';
+
+    if (a.rendered < a.total) {
+      animFrame = requestAnimationFrame(animStep);
+    } else {
+      // Animation complete — final clean render
+      animFrame = null;
+      const dt = performance.now() - a.startTime;
+
+      if (state.colorMode === 'density') {
+        if (state.renderStyle === 'lines') {
+          renderDensityLines(a.points, w, h, scale, offsetX, offsetY, palette);
+        } else {
+          // Final density render with glow
+          renderDensityFromBuf(a.densityBuf, w, h, palette, true);
+        }
+      } else if (state.colorMode === 'angle') {
+        if (state.renderStyle === 'lines') {
+          renderAngleLines(a.points, w, h, scale, offsetX, offsetY, palette);
+        } else {
+          renderAngle(a.points, w, h, scale, offsetX, offsetY, palette);
+        }
+      } else {
+        if (state.renderStyle === 'lines') {
+          renderSequenceLines(a.points, w, h, scale, offsetX, offsetY, palette);
+        } else {
+          renderSequence(a.points, w, h, scale, offsetX, offsetY, palette);
+        }
+      }
+
+      progressBar.style.width = '100%';
+      setTimeout(() => { progressBar.style.width = '0%'; }, 500);
+      renderIndicator.textContent = 'Done · ' + dt.toFixed(0) + 'ms';
+      setTimeout(() => { renderIndicator.classList.remove('active'); }, 1500);
+
+      infoFps.textContent = dt.toFixed(0) + 'ms';
+      infoPoints.textContent = a.total > 1000000
+        ? (a.total / 1000000).toFixed(1) + 'M pts'
+        : (a.total / 1000).toFixed(0) + 'K pts';
+      infoIter.textContent = state.iterations > 1000000
+        ? (state.iterations / 1000000).toFixed(1) + 'M'
+        : (state.iterations / 1000).toFixed(0) + 'K iter';
+
+      animState = null;
+    }
+  }
+
+  function renderDensityFromBuf(buf, w, h, palette, withGlow) {
+    let maxD = 0;
+    for (let i = 0; i < buf.length; i++) {
+      if (buf[i] > maxD) maxD = buf[i];
+    }
+    if (maxD === 0) maxD = 1;
+
+    const brightness = state.brightness;
+    const logscale = state.logScale;
+    const gamma = 0.45;
+
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+
+    const imgData = ctx.createImageData(w, h);
+    const pixels = imgData.data;
+
+    for (let i = 0; i < buf.length; i++) {
+      if (buf[i] === 0) continue;
+      let t;
+      if (logscale) {
+        t = Math.log(buf[i] + 1) / Math.log(maxD + 1);
+      } else {
+        t = buf[i] / maxD;
+      }
+      t = Math.pow(t, gamma) * brightness;
+      t = Math.min(1, Math.max(0, t));
+      const c = lerpPalette(palette.colors, t);
+      const idx = i * 4;
+      pixels[idx] = c[0];
+      pixels[idx + 1] = c[1];
+      pixels[idx + 2] = c[2];
+      pixels[idx + 3] = 255;
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+
+    if (withGlow) {
+      // Apply glow via blur + additive blend
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.filter = 'blur(3px)';
+      ctx.globalAlpha = 0.35;
+      ctx.drawImage(canvas, 0, 0);
+      ctx.filter = 'none';
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
   }
 
   function renderDensity(points, w, h, scale, offsetX, offsetY, palette) {
@@ -758,6 +977,135 @@
     ctx.globalCompositeOperation = 'source-over';
   }
 
+  // ===== Line Rendering Helpers =====
+
+  function renderDensityLines(points, w, h, scale, offsetX, offsetY, palette) {
+    // First build density buffer for color mapping
+    const buf = new Float32Array(w * h);
+    for (const p of points) {
+      const sx = Math.floor(p[0] * scale + offsetX);
+      const sy = Math.floor(p[1] * scale + offsetY);
+      if (sx >= 0 && sx < w && sy >= 0 && sy < h) {
+        buf[sy * w + sx]++;
+      }
+    }
+    let maxD = 0;
+    for (let i = 0; i < buf.length; i++) {
+      if (buf[i] > maxD) maxD = buf[i];
+    }
+    if (maxD === 0) maxD = 1;
+
+    const brightness = state.brightness;
+    const logscale = state.logScale;
+    const gamma = 0.45;
+
+    // Clear canvas
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw lines with additive blending
+    ctx.globalCompositeOperation = 'lighter';
+    const lineAlpha = Math.min(0.6, Math.max(0.05, 5000 / points.length));
+    ctx.lineWidth = 1;
+    ctx.lineCap = 'round';
+
+    for (let i = 1; i < points.length; i++) {
+      const sx0 = points[i - 1][0] * scale + offsetX;
+      const sy0 = points[i - 1][1] * scale + offsetY;
+      const sx = points[i][0] * scale + offsetX;
+      const sy = points[i][1] * scale + offsetY;
+
+      // Use density at the midpoint for coloring
+      const mx = Math.floor((sx0 + sx) / 2);
+      const my = Math.floor((sy0 + sy) / 2);
+      if (mx < 0 || mx >= w || my < 0 || my >= h) continue;
+
+      const d = buf[my * w + mx];
+      if (d === 0) continue;
+
+      let t;
+      if (logscale) {
+        t = Math.log(d + 1) / Math.log(maxD + 1);
+      } else {
+        t = d / maxD;
+      }
+      t = Math.pow(t, gamma) * brightness;
+      t = Math.min(1, Math.max(0, t));
+
+      const c = lerpPalette(palette.colors, t);
+      ctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${lineAlpha})`;
+
+      ctx.beginPath();
+      ctx.moveTo(sx0, sy0);
+      ctx.lineTo(sx, sy);
+      ctx.stroke();
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function renderAngleLines(points, w, h, scale, offsetX, offsetY, palette) {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.globalCompositeOperation = 'lighter';
+    const lineAlpha = Math.min(0.5, Math.max(0.05, 5000 / points.length));
+    ctx.lineWidth = 1;
+    ctx.lineCap = 'round';
+
+    for (let i = 1; i < points.length; i++) {
+      const sx0 = points[i - 1][0] * scale + offsetX;
+      const sy0 = points[i - 1][1] * scale + offsetY;
+      const sx = points[i][0] * scale + offsetX;
+      const sy = points[i][1] * scale + offsetY;
+
+      // Color by angle from center
+      const dx = sx - w / 2, dy = sy - h / 2;
+      let angle = Math.atan2(dy, dx) / Math.PI; // -1 to 1
+      angle = (angle + 1) / 2; // 0 to 1
+
+      const c = lerpPalette(palette.colors, angle);
+      ctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${lineAlpha})`;
+
+      ctx.beginPath();
+      ctx.moveTo(sx0, sy0);
+      ctx.lineTo(sx, sy);
+      ctx.stroke();
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function renderSequenceLines(points, w, h, scale, offsetX, offsetY, palette) {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.globalCompositeOperation = 'lighter';
+    const N = points.length;
+    const lineAlpha = Math.min(0.4, Math.max(0.04, 4000 / N));
+    ctx.lineWidth = 1;
+    ctx.lineCap = 'round';
+
+    for (let i = 1; i < N; i++) {
+      const sx0 = points[i - 1][0] * scale + offsetX;
+      const sy0 = points[i - 1][1] * scale + offsetY;
+      const sx = points[i][0] * scale + offsetX;
+      const sy = points[i][1] * scale + offsetY;
+
+      const t = i / N; // 0 to 1
+      const c = lerpPalette(palette.colors, t);
+      const a = lineAlpha * (0.6 + 0.4 * (1 - t));
+      ctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+
+      ctx.beginPath();
+      ctx.moveTo(sx0, sy0);
+      ctx.lineTo(sx, sy);
+      ctx.stroke();
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
   // ===== Share / URL =====
   window.getShareParams = function() {
     return {
@@ -769,6 +1117,8 @@
       brightness: state.brightness,
       colorMode: state.colorMode,
       logScale: state.logScale,
+      renderStyle: state.renderStyle,
+      animate: state.animate,
     };
   };
 
@@ -784,6 +1134,8 @@
     if (p.brightness) state.brightness = p.brightness;
     if (p.colorMode) state.colorMode = p.colorMode;
     if (p.logScale !== undefined) state.logScale = p.logScale;
+    if (p.renderStyle) state.renderStyle = p.renderStyle;
+    if (p.animate !== undefined) state.animate = p.animate;
 
     // Update all UI
     document.getElementById('ctrl-iterations').value = state.iterations;
@@ -794,6 +1146,8 @@
     document.getElementById('val-brightness').textContent = state.brightness.toFixed(1);
     document.getElementById('ctrl-colormode').value = state.colorMode;
     document.getElementById('ctrl-logscale').checked = state.logScale;
+    document.getElementById('ctrl-renderstyle').value = state.renderStyle;
+    document.getElementById('ctrl-animate').checked = state.animate;
 
     buildParamsUI();
     buildPresetsUI();
@@ -844,6 +1198,21 @@
     scheduleRender();
   });
 
+  document.getElementById('ctrl-renderstyle').addEventListener('change', function() {
+    state.renderStyle = this.value;
+    scheduleRender();
+  });
+
+  document.getElementById('ctrl-animate').addEventListener('change', function() {
+    state.animate = this.checked;
+    scheduleRender();
+  });
+
+  document.getElementById('ctrl-animspeed').addEventListener('input', function() {
+    state.animSpeed = parseInt(this.value);
+    document.getElementById('val-animspeed').textContent = formatNum(state.animSpeed);
+  });
+
   // ===== Actions =====
   document.getElementById('btn-regenerate').addEventListener('click', render);
 
@@ -876,6 +1245,18 @@
     link.download = 'attractor-' + state.type + '-' + Date.now() + '.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
+  });
+
+  // ===== Keyboard Shortcuts =====
+  document.addEventListener('keydown', function(e) {
+    // Don't capture if user is typing in an input
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    if (e.key === 'l' || e.key === 'L') {
+      e.preventDefault();
+      state.renderStyle = state.renderStyle === 'dots' ? 'lines' : 'dots';
+      document.getElementById('ctrl-renderstyle').value = state.renderStyle;
+      scheduleRender();
+    }
   });
 
   // ===== Init =====
