@@ -258,6 +258,27 @@
       <h3>Color Palette</h3>
       <div class="color-swatch-grid" id="swatches"></div>
 
+      <h3>Morph Mode</h3>
+      <label>
+        <input type="checkbox" id="ctrl-morph"> Enable Morphing
+      </label>
+      <div id="morph-controls" style="display:none">
+        <label>Target Attractor
+          <select id="ctrl-morphtarget"></select>
+        </label>
+        <label>Morph Duration <span id="val-morphdur">5.0s</span>
+          <input type="range" id="ctrl-morphdur" min="1" max="20" value="5" step="0.5">
+        </label>
+        <label>Morph Curve
+          <select id="ctrl-morphcurve">
+            <option value="smooth">Smooth (ease-in-out)</option>
+            <option value="linear">Linear</option>
+            <option value="easein">Ease In</option>
+            <option value="easeout">Ease Out</option>
+          </select>
+        </label>
+      </div>
+
       <h3>Rendering</h3>
       <label>Render Style
         <select id="ctrl-renderstyle">
@@ -299,7 +320,7 @@
       </div>
 
       <div class="hint-badge">
-        <kbd>R</kbd> render · <kbd>D</kbd> random · <kbd>S</kbd> save · <kbd>C</kbd> share · <kbd>L</kbd> lines
+        <kbd>R</kbd> render · <kbd>D</kbd> random · <kbd>S</kbd> save · <kbd>C</kbd> share · <kbd>L</kbd> lines · <kbd>M</kbd> morph
       </div>
     </div>
   </div>
@@ -479,6 +500,10 @@
     renderStyle: 'dots',
     animate: false,
     animSpeed: 10000,
+    morph: false,
+    morphTarget: 'svensson',
+    morphDuration: 5.0,
+    morphCurve: 'smooth',
   };
 
   let animFrame = null;
@@ -504,6 +529,46 @@
     canvas.height = wrap.clientHeight * dpr;
     canvas.style.width = wrap.clientWidth + 'px';
     canvas.style.height = wrap.clientHeight + 'px';
+  }
+  // ===== Morph Helpers =====
+  function morphEasing(t, curve) {
+    switch (curve) {
+      case 'linear': return t;
+      case 'easein': return t * t;
+      case 'easeout': return 1 - (1 - t) * (1 - t);
+      case 'smooth': default: return t * t * (3 - 2 * t);
+    }
+  }
+
+  function buildMorphTargetUI() {
+    const sel = document.getElementById('ctrl-morphtarget');
+    sel.innerHTML = '';
+    for (const [key, attr] of Object.entries(ATTRACTORS)) {
+      if (key === state.type) continue; // can't morph to self
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = attr.name;
+      if (key === state.morphTarget) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    // If current target is same as source, pick first available
+    if (state.morphTarget === state.type || !ATTRACTORS[state.morphTarget]) {
+      const available = Object.keys(ATTRACTORS).filter(k => k !== state.type);
+      state.morphTarget = available[0] || 'svensson';
+      sel.value = state.morphTarget;
+    }
+  }
+
+  function lerpParams(p1, p2, t) {
+    const result = {};
+    // Interpolate shared parameters
+    const allKeys = new Set([...Object.keys(p1), ...Object.keys(p2)]);
+    for (const k of allKeys) {
+      const v1 = p1[k] !== undefined ? p1[k] : (ATTRACTORS[state.type].params[k] || 0);
+      const v2 = p2[k] !== undefined ? p2[k] : (ATTRACTORS[state.morphTarget].params[k] || 0);
+      result[k] = v1 + (v2 - v1) * t;
+    }
+    return result;
   }
 
   // ===== Build param sliders =====
@@ -616,24 +681,82 @@
     const palette = PALETTES[state.palette];
 
     // Generate all points first (fast, synchronous)
-    let state3d = attr.init();
     let points = [];
 
-    if (attr.is3D) {
-      let s = [...state3d];
-      for (let i = 0; i < 500; i++) { s = attr.iterate(s, null, state.params); } // burn-in
+    if (state.morph && ATTRACTORS[state.morphTarget]) {
+      // MORPHING: generate two independent trajectories, then interpolate
+      const attrT = ATTRACTORS[state.morphTarget];
+      const sourceParams = state.params;
+      const targetParams = { ...attrT.params }; // use target defaults for params not in current type
+      // Merge current params into target where keys overlap
+      for (const k of Object.keys(sourceParams)) {
+        if (targetParams[k] === undefined && attrT.params[k] !== undefined) {
+          // Keep target default
+        }
+      }
+
+      // Generate source points
+      let srcPts = [];
+      if (attr.is3D) {
+        let s = [...attr.init()];
+        for (let i = 0; i < 500; i++) s = attr.iterate(s, null, sourceParams);
+        for (let i = 0; i < N; i++) {
+          s = attr.iterate(s, null, sourceParams);
+          srcPts.push(attr.project(s[0], s[1], s[2], w, h));
+        }
+      } else {
+        let x = attr.init()[0], y = attr.init()[1];
+        for (let i = 0; i < 200; i++) [x, y] = attr.iterate(x, y, sourceParams);
+        for (let i = 0; i < N; i++) {
+          [x, y] = attr.iterate(x, y, sourceParams);
+          srcPts.push([x, y]);
+        }
+      }
+
+      // Generate target points
+      let tgtPts = [];
+      if (attrT.is3D) {
+        let s = [...attrT.init()];
+        for (let i = 0; i < 500; i++) s = attrT.iterate(s, null, targetParams);
+        for (let i = 0; i < N; i++) {
+          s = attrT.iterate(s, null, targetParams);
+          tgtPts.push(attrT.project(s[0], s[1], s[2], w, h));
+        }
+      } else {
+        let x = attrT.init()[0], y = attrT.init()[1];
+        for (let i = 0; i < 200; i++) [x, y] = attrT.iterate(x, y, targetParams);
+        for (let i = 0; i < N; i++) {
+          [x, y] = attrT.iterate(x, y, targetParams);
+          tgtPts.push([x, y]);
+        }
+      }
+
+      // Interpolate between source and target
       for (let i = 0; i < N; i++) {
-        s = attr.iterate(s, null, state.params);
-        points.push(attr.project(s[0], s[1], s[2], w, h));
+        const tRaw = i / N;
+        const t = morphEasing(tRaw, state.morphCurve);
+        const sx = srcPts[i][0] + (tgtPts[i][0] - srcPts[i][0]) * t;
+        const sy = srcPts[i][1] + (tgtPts[i][1] - srcPts[i][1]) * t;
+        points.push([sx, sy]);
       }
     } else {
-      let x = state3d[0], y = state3d[1];
-      for (let i = 0; i < 200; i++) {
-        [x, y] = attr.iterate(x, y, state.params);
-      } // burn-in
-      for (let i = 0; i < N; i++) {
-        [x, y] = attr.iterate(x, y, state.params);
-        points.push([x, y]);
+      // Single attractor (original behavior)
+      if (attr.is3D) {
+        let s = [...attr.init()];
+        for (let i = 0; i < 500; i++) { s = attr.iterate(s, null, state.params); } // burn-in
+        for (let i = 0; i < N; i++) {
+          s = attr.iterate(s, null, state.params);
+          points.push(attr.project(s[0], s[1], s[2], w, h));
+        }
+      } else {
+        let x = attr.init()[0], y = attr.init()[1];
+        for (let i = 0; i < 200; i++) {
+          [x, y] = attr.iterate(x, y, state.params);
+        } // burn-in
+        for (let i = 0; i < N; i++) {
+          [x, y] = attr.iterate(x, y, state.params);
+          points.push([x, y]);
+        }
       }
     }
 
@@ -1119,6 +1242,10 @@
       logScale: state.logScale,
       renderStyle: state.renderStyle,
       animate: state.animate,
+      morph: state.morph,
+      morphTarget: state.morphTarget,
+      morphDuration: state.morphDuration,
+      morphCurve: state.morphCurve,
     };
   };
 
@@ -1136,6 +1263,10 @@
     if (p.logScale !== undefined) state.logScale = p.logScale;
     if (p.renderStyle) state.renderStyle = p.renderStyle;
     if (p.animate !== undefined) state.animate = p.animate;
+    if (p.morph !== undefined) state.morph = p.morph;
+    if (p.morphTarget && ATTRACTORS[p.morphTarget]) state.morphTarget = p.morphTarget;
+    if (p.morphDuration) state.morphDuration = p.morphDuration;
+    if (p.morphCurve) state.morphCurve = p.morphCurve;
 
     // Update all UI
     document.getElementById('ctrl-iterations').value = state.iterations;
@@ -1148,6 +1279,14 @@
     document.getElementById('ctrl-logscale').checked = state.logScale;
     document.getElementById('ctrl-renderstyle').value = state.renderStyle;
     document.getElementById('ctrl-animate').checked = state.animate;
+    document.getElementById('ctrl-morph').checked = state.morph;
+    document.getElementById('morph-controls').style.display = state.morph ? 'block' : 'none';
+    if (state.morph) {
+      buildMorphTargetUI();
+      document.getElementById('ctrl-morphdur').value = state.morphDuration;
+      document.getElementById('val-morphdur').textContent = state.morphDuration.toFixed(1) + 's';
+      document.getElementById('ctrl-morphcurve').value = state.morphCurve;
+    }
 
     buildParamsUI();
     buildPresetsUI();
@@ -1167,6 +1306,7 @@
     state.params = { ...attr.params };
     buildParamsUI();
     buildPresetsUI();
+    if (state.morph) buildMorphTargetUI();
     scheduleRender();
   });
 
@@ -1213,6 +1353,29 @@
     document.getElementById('val-animspeed').textContent = formatNum(state.animSpeed);
   });
 
+  // ===== Morph Controls =====
+  document.getElementById('ctrl-morph').addEventListener('change', function() {
+    state.morph = this.checked;
+    document.getElementById('morph-controls').style.display = state.morph ? 'block' : 'none';
+    if (state.morph) buildMorphTargetUI();
+    scheduleRender();
+  });
+
+  document.getElementById('ctrl-morphtarget').addEventListener('change', function() {
+    state.morphTarget = this.value;
+    scheduleRender();
+  });
+
+  document.getElementById('ctrl-morphdur').addEventListener('input', function() {
+    state.morphDuration = parseFloat(this.value);
+    document.getElementById('val-morphdur').textContent = state.morphDuration.toFixed(1) + 's';
+  });
+
+  document.getElementById('ctrl-morphcurve').addEventListener('change', function() {
+    state.morphCurve = this.value;
+    scheduleRender();
+  });
+
   // ===== Actions =====
   document.getElementById('btn-regenerate').addEventListener('click', render);
 
@@ -1227,9 +1390,14 @@
     state.palette = Math.floor(Math.random() * PALETTES.length);
     state.colorMode = ['density', 'angle', 'sequence'][Math.floor(Math.random() * 3)];
     state.logScale = Math.random() > 0.3;
+    state.morph = Math.random() > 0.7; // 30% chance of morph
+    state.morphCurve = ['smooth', 'linear', 'easein', 'easeout'][Math.floor(Math.random() * 4)];
 
     document.getElementById('ctrl-colormode').value = state.colorMode;
     document.getElementById('ctrl-logscale').checked = state.logScale;
+    document.getElementById('ctrl-morph').checked = state.morph;
+    document.getElementById('morph-controls').style.display = state.morph ? 'block' : 'none';
+    if (state.morph) buildMorphTargetUI();
     buildParamsUI();
     buildSwatches();
     scheduleRender();
@@ -1257,6 +1425,14 @@
       document.getElementById('ctrl-renderstyle').value = state.renderStyle;
       scheduleRender();
     }
+    if (e.key === 'm' || e.key === 'M') {
+      e.preventDefault();
+      state.morph = !state.morph;
+      document.getElementById('ctrl-morph').checked = state.morph;
+      document.getElementById('morph-controls').style.display = state.morph ? 'block' : 'none';
+      if (state.morph) buildMorphTargetUI();
+      scheduleRender();
+    }
   });
 
   // ===== Init =====
@@ -1265,6 +1441,7 @@
   buildParamsUI();
   buildPresetsUI();
   buildSwatches();
+  buildMorphTargetUI();
   render();
 })();
 </script>
