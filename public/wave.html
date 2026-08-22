@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wave Interference — Digital Art Lab</title>
+  <meta name="description" content="Real-time wave interference simulator — click to place sources and watch wave patterns emerge.">
+  <meta property="og:title" content="Wave Interference — Digital Art Lab">
+  <meta property="og:description" content="Real-time wave interference simulator with interactive source placement.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://agent-08.sklopocija.com/wave">
+  <meta property="og:image" content="https://agent-08.sklopocija.com/images/hero.png">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .wave-layout { display:flex; gap:16px; padding:16px 24px; height:calc(100vh - 64px); }
+    .wave-canvas-wrap { flex:1; position:relative; min-width:0; display:flex; flex-direction:column; }
+    .wave-canvas-wrap canvas { flex:1; border-radius:10px; cursor:crosshair; display:block; width:100%; background:#0a0a0f; }
+    .wave-sidebar { width:300px; flex-shrink:0; overflow-y:auto; padding-bottom:24px; }
+    .wave-controls { background:rgba(20,20,30,0.95); border-radius:12px; padding:16px; border:1px solid rgba(255,255,255,0.06); }
+    .wave-controls h3 { margin:0 0 12px 0; font-size:0.95rem; color:#ccc; font-weight:600; }
+    .wave-controls .ctrl-group { margin-bottom:14px; }
+    .wave-controls .ctrl-label { display:flex; justify-content:space-between; font-size:0.78rem; color:#888; margin-bottom:4px; }
+    .wave-controls .ctrl-label span:last-child { color:#bbb; font-family:monospace; }
+    .wave-controls input[type="range"] { width:100%; accent-color:#6cf; }
+    .wave-controls select { width:100%; background:#1a1a2e; color:#ccc; border:1px solid #333; border-radius:6px; padding:5px 8px; font-size:0.82rem; }
+    .wave-controls button { width:100%; margin-top:6px; padding:7px 12px; border:1px solid #333; border-radius:8px; background:#1a1a2e; color:#ccc; font-size:0.82rem; cursor:pointer; transition:all 0.2s; }
+    .wave-controls button:hover { background:#2a2a4e; border-color:#6cf; color:#fff; }
+    .wave-btn-row { display:flex; gap:6px; margin-top:8px; }
+    .wave-btn-row button { flex:1; }
+    .wave-info { background:rgba(20,20,30,0.85); border-radius:10px; padding:12px 16px; margin-top:12px; border:1px solid rgba(255,255,255,0.04); }
+    .wave-info p { margin:0; font-size:0.75rem; color:#777; line-height:1.5; }
+    .wave-info strong { color:#aaa; }
+    .wave-stats { font-size:0.72rem; color:#666; font-family:monospace; margin-top:6px; }
+    .wave-source-list { margin-top:10px; }
+    .wave-source-item { display:flex; align-items:center; gap:8px; padding:6px 8px; margin-bottom:4px; background:rgba(255,255,255,0.03); border-radius:6px; font-size:0.75rem; color:#999; cursor:pointer; transition:background 0.15s; }
+    .wave-source-item:hover { background:rgba(255,255,255,0.07); }
+    .wave-source-item .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .wave-source-item .remove-btn { margin-left:auto; cursor:pointer; color:#555; font-size:0.9rem; }
+    .wave-source-item .remove-btn:hover { color:#f55; }
+    .wave-source-item .label { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .wave-status { position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.7); color:#aaa; padding:4px 10px; border-radius:6px; font-size:0.72rem; font-family:monospace; pointer-events:none; z-index:2; }
+    .wave-badge { position:absolute; bottom:10px; left:10px; display:flex; gap:4px; z-index:2; pointer-events:none; }
+    .wave-badge span { background:rgba(0,0,0,0.55); color:#888; padding:3px 8px; border-radius:5px; font-size:0.68rem; font-family:monospace; }
+    @media (max-width: 768px) {
+      .wave-layout { flex-direction:column; height:auto; }
+      .wave-sidebar { width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous">Lissajous</a>
+        <a href="/spirograph">Spirograph</a>
+        <a href="/particle-life">Life</a>
+        <a href="/noise">Noise</a>
+        <a href="/cellular">Automata</a>
+        <a href="/voronoi">Voronoi</a>
+        <a href="/attract">Attractors</a>
+        <a href="/wave" class="active">Waves</a>
+        <a href="/resources">Resources</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="wave-layout">
+    <div class="wave-canvas-wrap">
+      <canvas id="waveCanvas"></canvas>
+      <div class="wave-status" id="waveStatus">Paused — click canvas to place sources</div>
+      <div class="wave-badge" id="waveBadge">
+        <span>S <b>save</b></span>
+        <span>R <b>reset</b></span>
+        <span>Space <b>play</b></span>
+        <span>D <b>random</b></span>
+        <span>Del <b>clear</b></span>
+        <span>C <b>share</b></span>
+      </div>
+    </div>
+    <div class="wave-sidebar">
+      <div class="wave-controls">
+        <h3>🌊 Wave Interference</h3>
+
+        <div class="ctrl-group">
+          <div class="ctrl-label"><span>Resolution</span><span id="val-res">3</span></div>
+          <input type="range" id="ctrl-res" min="2" max="6" value="3" step="1">
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-label"><span>Time Speed</span><span id="val-speed">1.0</span></div>
+          <input type="range" id="ctrl-speed" min="0.1" max="5.0" value="1.0" step="0.1">
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-label"><span>Damping</span><span id="val-damp">0.02</span></div>
+          <input type="range" id="ctrl-damp" min="0" max="0.1" value="0.02" step="0.002">
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-label"><span>Color Palette</span></div>
+          <select id="ctrl-palette">
+            <option value="0">Ocean</option>
+            <option value="1">Neon</option>
+            <option value="2">Thermal</option>
+            <option value="3">Pastel</option>
+            <option value="4">Grayscale</option>
+            <option value="5">Rainbow</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-label"><span>Display Mode</span></div>
+          <select id="ctrl-mode">
+            <option value="0">Interference</option>
+            <option value="1">Amplitude</option>
+            <option value="2">Phase</option>
+            <option value="3">Power</option>
+          </select>
+        </div>
+
+        <div class="wave-btn-row">
+          <button id="btn-pause">▶ Play</button>
+          <button id="btn-reset">↺ Reset</button>
+        </div>
+        <div class="wave-btn-row">
+          <button id="btn-random">🎲 Random</button>
+          <button id="btn-clear">✕ Clear</button>
+        </div>
+        <button id="btn-snapshot">📷 Save PNG</button>
+
+        <h3 style="margin-top:14px">Sources (<span id="src-count">0</span>)</h3>
+        <div class="wave-source-list" id="source-list"></div>
+        <p style="font-size:0.7rem;color:#555;margin-top:6px;">Click canvas to add sources. Drag to move them.</p>
+      </div>
+
+      <div class="wave-info">
+        <p><strong>How it works:</strong> Each source emits concentric waves at its own wavelength and amplitude. The canvas sums the wave field at every pixel in real time, creating interference patterns.</p>
+        <div class="wave-stats" id="wave-stats"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/shortcuts.js"></script>
+  <script src="/share.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    const canvas = document.getElementById('waveCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // ── Configuration ──
+    let RESOLUTION = 3;
+    let TIME_SPEED = 1.0;
+    let DAMPING = 0.02;
+    let paletteIdx = 0;
+    let displayMode = 0;
+    let running = false;
+    let time = 0;
+    let sources = [];
+    let dragging = null;
+    let dragOffset = {x:0, y:0};
+    let animId = null;
+    let lastFrame = 0;
+    let fpsCounter = 0;
+    let fpsTime = 0;
+    let currentFps = 0;
+
+    // ── Color Palettes ──
+    const PALETTES = [
+      // Ocean
+      (t) => {
+        t = (t+1)/2;
+        const r = Math.floor(8 + t*40);
+        const g = Math.floor(30 + t*200);
+        const b = Math.floor(80 + t*175);
+        return [r,g,b];
+      },
+      // Neon
+      (t) => {
+        t = (t+1)/2;
+        const r = Math.floor(t*255);
+        const g = Math.floor(t*80 + (1-t)*20);
+        const b = Math.floor(255 - t*150);
+        return [r,g,b];
+      },
+      // Thermal
+      (t) => {
+        t = (t+1)/2;
+        const r = Math.floor(t*255);
+        const g = Math.floor(t*200);
+        const b = Math.floor((1-t)*180);
+        return [r,g,b];
+      },
+      // Pastel
+      (t) => {
+        t = (t+1)/2;
+        const r = Math.floor(120 + t*135);
+        const g = Math.floor(140 + t*115);
+        const b = Math.floor(180 + t*75);
+        return [r,g,b];
+      },
+      // Grayscale
+      (t) => {
+        t = (t+1)/2;
+        const v = Math.floor(t*255);
+        return [v,v,v];
+      },
+      // Rainbow
+      (t) => {
+        t = (t+1)/2;
+        const h = t * 360;
+        const s = 0.85, l = 0.5;
+        const c = (1 - Math.abs(2*l - 1)) * s;
+        const x = c * (1 - Math.abs((h/60) % 2 - 1));
+        const m = l - c/2;
+        let r=0,g=0,b=0;
+        if (h < 60) { r=c; g=x; }
+        else if (h < 120) { r=x; g=c; }
+        else if (h < 180) { g=c; b=x; }
+        else if (h < 240) { g=x; b=c; }
+        else if (h < 300) { r=x; b=c; }
+        else { r=c; b=x; }
+        return [Math.floor((r+m)*255), Math.floor((g+m)*255), Math.floor((b+m)*255)];
+      }
+    ];
+
+    // ── Resize ──
+    function resize() {
+      const wrap = canvas.parentElement;
+      const w = wrap.clientWidth;
+      const h = wrap.clientHeight;
+      canvas.width = w;
+      canvas.height = h;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // ── Default sources ──
+    function addSource(x, y, wavelength, amplitude, freq) {
+      sources.push({ x, y, wavelength: wavelength||80, amplitude: amplitude||1.0, freq: freq||1.0 });
+      updateSourceList();
+    }
+
+    function clearSources() {
+      sources = [];
+      updateSourceList();
+    }
+
+    // ── Render wave field ──
+    function renderWaves() {
+      const W = canvas.width;
+      const H = canvas.height;
+      const step = RESOLUTION;
+      const imgData = ctx.createImageData(W, H);
+      const data = imgData.data;
+      const t = time;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const offscreenW = Math.floor(W / step);
+      const offscreenH = Math.floor(H / step);
+
+      // Precompute wave contributions
+      const numSrc = sources.length;
+      if (numSrc === 0) {
+        ctx.fillStyle = '#0a0a0f';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#444';
+        ctx.font = '14px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Click to place wave sources', W/2, H/2);
+        return;
+      }
+
+      const palette = PALETTES[paletteIdx];
+      const invStep = 1.0 / step;
+      const srcX = new Float64Array(numSrc);
+      const srcY = new Float64Array(numSrc);
+      const wl = new Float64Array(numSrc);
+      const amp = new Float64Array(numSrc);
+      const freq = new Float64Array(numSrc);
+      for (let i = 0; i < numSrc; i++) {
+        srcX[i] = sources[i].x;
+        srcY[i] = sources[i].y;
+        wl[i] = sources[i].wavelength;
+        amp[i] = sources[i].amplitude;
+        freq[i] = sources[i].freq;
+      }
+
+      for (let y = 0; y < H; y += step) {
+        for (let x = 0; x < W; x += step) {
+          let sum = 0;
+          for (let i = 0; i < numSrc; i++) {
+            const dx = x - srcX[i];
+            const dy = y - srcY[i];
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const decay = Math.exp(-DAMPING * dist);
+            const phase = (2 * Math.PI / wl[i]) * dist - t * freq[i] * 2 * Math.PI;
+            sum += amp[i] * decay * Math.sin(phase);
+          }
+
+          // Map to color
+          let rgb;
+          if (displayMode === 0) {
+            rgb = palette(sum / numSrc);
+          } else if (displayMode === 1) {
+            rgb = palette(Math.abs(sum) / numSrc);
+          } else if (displayMode === 2) {
+            const angle = Math.atan2(sum, 1);
+            rgb = palette((angle + Math.PI) / (2 * Math.PI));
+          } else {
+            rgb = palette(sum * sum / numSrc);
+          }
+
+          // Fill the pixel block
+          for (let dy = 0; dy < step && y+dy < H; dy++) {
+            for (let dx = 0; dx < step && x+dx < W; dx++) {
+              const idx = ((y+dy) * W + (x+dx)) * 4;
+              data[idx] = rgb[0];
+              data[idx+1] = rgb[1];
+              data[idx+2] = rgb[2];
+              data[idx+3] = 255;
+            }
+          }
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+
+      // Draw source markers
+      for (let i = 0; i < numSrc; i++) {
+        const s = sources[i];
+        const r = s.wavelength * 0.12;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, Math.max(3, r), 0, Math.PI*2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 2, 0, Math.PI*2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+      }
+    }
+
+    // ── Animation loop ──
+    function animate(ts) {
+      if (!running) return;
+      const dt = Math.min((ts - lastFrame) / 1000, 0.05);
+      lastFrame = ts;
+      time += dt * TIME_SPEED;
+
+      fpsCounter++;
+      if (ts - fpsTime > 1000) {
+        currentFps = fpsCounter;
+        fpsCounter = 0;
+        fpsTime = ts;
+      }
+
+      renderWaves();
+      updateStatus();
+      animId = requestAnimationFrame(animate);
+    }
+
+    function start() {
+      if (running) return;
+      running = true;
+      lastFrame = performance.now();
+      fpsTime = lastFrame;
+      fpsCounter = 0;
+      animId = requestAnimationFrame(animate);
+      document.getElementById('btn-pause').textContent = '⏸ Pause';
+      updateStatus();
+    }
+
+    function pause() {
+      running = false;
+      if (animId) cancelAnimationFrame(animId);
+      document.getElementById('btn-pause').textContent = '▶ Play';
+      updateStatus();
+    }
+
+    function updateStatus() {
+      const s = document.getElementById('waveStatus');
+      if (running) {
+        s.textContent = `Running — ${sources.length} source${sources.length!==1?'s':''} — ${currentFps} fps — t=${time.toFixed(1)}`;
+      } else {
+        s.textContent = `Paused — ${sources.length} source${sources.length!==1?'s':''} — t=${time.toFixed(1)}`;
+      }
+      document.getElementById('wave-stats').textContent =
+        `${sources.length} sources · step=${RESOLUTION} · t=${time.toFixed(2)} · speed=${TIME_SPEED}x · damping=${DAMPING}`;
+    }
+
+    // ── Source list UI ──
+    function updateSourceList() {
+      const list = document.getElementById('source-list');
+      const count = document.getElementById('src-count');
+      count.textContent = sources.length;
+      list.innerHTML = '';
+      sources.forEach((s, i) => {
+        const item = document.createElement('div');
+        item.className = 'wave-source-item';
+        const col = PALETTES[paletteIdx]((i / Math.max(sources.length-1, 1))*2 - 1);
+        item.innerHTML = `<div class="dot" style="background:rgb(${col[0]},${col[1]},${col[2]})"></div>` +
+          `<span class="label">S${i+1} — λ=${s.wavelength.toFixed(0)} A=${s.amplitude.toFixed(1)} f=${s.freq.toFixed(1)}</span>` +
+          `<span class="remove-btn" data-idx="${i}">✕</span>`;
+        item.addEventListener('click', (e) => {
+          if (e.target.classList.contains('remove-btn')) {
+            sources.splice(i, 1);
+            updateSourceList();
+            if (!running) renderWaves();
+            return;
+          }
+          // Center on source
+          dragging = { idx: i };
+        });
+        list.appendChild(item);
+      });
+    }
+
+    // ── Canvas interaction ──
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      // Check if clicking near a source
+      for (let i = 0; i < sources.length; i++) {
+        const dx = sources[i].x - x;
+        const dy = sources[i].y - y;
+        if (dx*dx + dy*dy < 225) { // 15px
+          dragging = { idx: i };
+          dragOffset = { x: dx, y: dy };
+          return;
+        }
+      }
+      // Place new source
+      const wl = 40 + Math.random() * 120;
+      addSource(x, y, wl, 0.8 + Math.random() * 0.6, 0.5 + Math.random() * 1.5);
+      if (!running) renderWaves();
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const rect = canvas.getBoundingClientRect();
+      sources[dragging.idx].x = e.clientX - rect.left;
+      sources[dragging.idx].y = e.clientY - rect.top;
+      if (!running) renderWaves();
+      updateSourceList();
+    });
+
+    canvas.addEventListener('mouseup', () => { dragging = null; });
+    canvas.addEventListener('mouseleave', () => { dragging = null; });
+
+    // ── Controls ──
+    document.getElementById('ctrl-res').addEventListener('input', (e) => {
+      RESOLUTION = parseInt(e.target.value);
+      document.getElementById('val-res').textContent = RESOLUTION;
+      if (!running) renderWaves();
+    });
+    document.getElementById('ctrl-speed').addEventListener('input', (e) => {
+      TIME_SPEED = parseFloat(e.target.value);
+      document.getElementById('val-speed').textContent = TIME_SPEED.toFixed(1);
+    });
+    document.getElementById('ctrl-damp').addEventListener('input', (e) => {
+      DAMPING = parseFloat(e.target.value);
+      document.getElementById('val-damp').textContent = DAMPING.toFixed(3);
+      if (!running) renderWaves();
+    });
+    document.getElementById('ctrl-palette').addEventListener('change', (e) => {
+      paletteIdx = parseInt(e.target.value);
+      if (!running) renderWaves();
+      updateSourceList();
+    });
+    document.getElementById('ctrl-mode').addEventListener('change', (e) => {
+      displayMode = parseInt(e.target.value);
+      if (!running) renderWaves();
+    });
+
+    document.getElementById('btn-pause').addEventListener('click', () => {
+      running ? pause() : start();
+    });
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      time = 0;
+      if (!running) renderWaves();
+    });
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      clearSources();
+      time = 0;
+      if (!running) renderWaves();
+    });
+    document.getElementById('btn-random').addEventListener('click', randomize);
+    document.getElementById('btn-snapshot').addEventListener('click', () => {
+      // Render one frame to capture
+      if (!running) renderWaves();
+      const a = document.createElement('a');
+      a.download = 'wave-interference.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    });
+
+    // ── Randomize ──
+    function randomize() {
+      clearSources();
+      const W = canvas.width, H = canvas.height;
+      const n = 3 + Math.floor(Math.random() * 5);
+      for (let i = 0; i < n; i++) {
+        const x = 50 + Math.random() * (W - 100);
+        const y = 50 + Math.random() * (H - 100);
+        addSource(x, y, 40 + Math.random() * 120, 0.6 + Math.random() * 0.8, 0.4 + Math.random() * 1.6);
+      }
+      paletteIdx = Math.floor(Math.random() * 6);
+      document.getElementById('ctrl-palette').value = paletteIdx;
+      displayMode = Math.floor(Math.random() * 4);
+      document.getElementById('ctrl-mode').value = displayMode;
+      if (!running) renderWaves();
+    }
+
+    // ── Share API ──
+    window.getShareParams = function() {
+      return {
+        res: RESOLUTION, speed: TIME_SPEED, damp: DAMPING,
+        pal: paletteIdx, mode: displayMode, time: time,
+        src: sources.map(s => ({ x: s.x, y: s.y, wl: s.wavelength, a: s.amplitude, f: s.freq }))
+      };
+    };
+
+    window.applyShareParams = function(p) {
+      if (p.res !== undefined) { RESOLUTION = p.res; document.getElementById('ctrl-res').value = p.res; document.getElementById('val-res').textContent = p.res; }
+      if (p.speed !== undefined) { TIME_SPEED = p.speed; document.getElementById('ctrl-speed').value = p.speed; document.getElementById('val-speed').textContent = p.speed; }
+      if (p.damp !== undefined) { DAMPING = p.damp; document.getElementById('ctrl-damp').value = p.damp; document.getElementById('val-damp').textContent = p.damp; }
+      if (p.pal !== undefined) { paletteIdx = p.pal; document.getElementById('ctrl-palette').value = p.pal; }
+      if (p.mode !== undefined) { displayMode = p.mode; document.getElementById('ctrl-mode').value = p.mode; }
+      if (p.time !== undefined) { time = p.time; }
+      if (p.src) {
+        sources = p.src.map(s => ({ x: s.x, y: s.y, wavelength: s.wl, amplitude: s.a, freq: s.f }));
+        updateSourceList();
+      }
+      renderWaves();
+    };
+
+    // ── Keyboard shortcuts ──
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+      if (e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        running ? pause() : start();
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        time = 0;
+        if (!running) renderWaves();
+      }
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        document.getElementById('btn-snapshot').click();
+      }
+      if (e.key === 'd' || e.key === 'D') {
+        randomize();
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        clearSources();
+        time = 0;
+        if (!running) renderWaves();
+      }
+    });
+
+    // ── Init ──
+    function init() {
+      resize();
+      // Place 3 default sources
+      const W = canvas.width, H = canvas.height;
+      addSource(W*0.35, H*0.4, 80, 1.0, 1.0);
+      addSource(W*0.65, H*0.4, 80, 1.0, 1.0);
+      addSource(W*0.5, H*0.65, 100, 0.8, 0.7);
+      renderWaves();
+      updateStatus();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>
+</body>
+</html>
