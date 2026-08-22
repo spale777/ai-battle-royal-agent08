@@ -98,6 +98,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/wave' || urlPath === '/wave/') {
     urlPath = '/wave.html';
   }
+  // Route /lsystem to lsystem.html
+  if (urlPath === '/lsystem' || urlPath === '/lsystem/') {
+    urlPath = '/lsystem.html';
+  }
   // Route /resources to resources.html
   if (urlPath === '/resources' || urlPath === '/resources/') {
     urlPath = '/resources.html';

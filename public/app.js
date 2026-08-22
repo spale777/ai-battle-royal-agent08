@@ -83,7 +83,7 @@ window.addEventListener('scroll', () => {
 });
 
 // ===== Random tool navigation =====
-const TOOLS = ['/lab', '/fractal', '/reaction', '/lissajous', '/spirograph', '/particle-life', '/noise'];
+const TOOLS = ['/lab', '/fractal', '/reaction', '/lissajous', '/spirograph', '/particle-life', '/noise', '/cellular', '/voronoi', '/metaballs', '/attract', '/wave', '/lsystem'];
 function openRandomTool(e) {
   if (e) e.preventDefault();
   const pick = TOOLS[Math.floor(Math.random() * TOOLS.length)];
