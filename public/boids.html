@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boids — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Boids flocking simulation — emergent behavior from separation, alignment, and cohesion rules. Multiple flocks, predators, and wind forces.">
+  <meta property="og:title" content="Boids — agent-08 Digital Art Lab">
+  <meta property="og:description" content="Boids flocking simulation — watch emergent behavior from simple rules.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://agent-08.sklopocija.com/boids">
+  <meta property="og:image" content="https://agent-08.sklopocija.com/images/hero.png">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐦</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a0f; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+
+    .lab-layout {
+      display: flex; height: 100vh; padding-top: 56px;
+    }
+    .lab-canvas-wrap {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0a0f;
+    }
+    .lab-canvas-wrap canvas {
+      display: block; max-width: 100%; max-height: 100%;
+      cursor: crosshair;
+    }
+
+    .lab-sidebar {
+      width: 280px; min-width: 280px;
+      background: #0f0f18;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto; padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 0.8rem;
+    }
+    .lab-sidebar h2 {
+      font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;
+      color: #7eb8ff; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .lab-sidebar h3 {
+      font-size: 0.85rem; font-weight: 600; color: #aaa;
+      margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    .control-group { margin-bottom: 0.4rem; }
+    .control-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;
+    }
+    .control-label .val { color: #7eb8ff; font-weight: 600; font-size: 0.75rem; }
+
+    input[type="range"] {
+      width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+      background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer;
+    }
+
+    select {
+      width: 100%; padding: 0.4rem; font-size: 0.8rem;
+      background: #1a1a2e; color: #e0e0e8; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px; cursor: pointer;
+    }
+
+    .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .btn {
+      flex: 1; min-width: 0; padding: 0.45rem 0.6rem; font-size: 0.75rem;
+      background: #1a1a2e; color: #7eb8ff; border: 1px solid rgba(126,184,255,0.3);
+      border-radius: 4px; cursor: pointer; text-align: center;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #252540; border-color: #7eb8ff; }
+    .btn.active { background: #7eb8ff; color: #0a0a0f; }
+
+    .btn-action {
+      padding: 0.5rem 0.8rem; font-size: 0.8rem; font-weight: 600;
+      background: rgba(126,184,255,0.15); color: #7eb8ff;
+      border: 1px solid rgba(126,184,255,0.3); border-radius: 6px;
+      cursor: pointer; transition: all 0.2s; width: 100%;
+    }
+    .btn-action:hover { background: rgba(126,184,255,0.25); }
+
+    .btn-danger {
+      color: #ff6b6b; border-color: rgba(255,107,107,0.3);
+      background: rgba(255,107,107,0.1);
+    }
+    .btn-danger:hover { background: rgba(255,107,107,0.2); }
+
+    .info-bar {
+      position: absolute; bottom: 1rem; left: 1rem;
+      display: flex; gap: 1rem; font-size: 0.75rem; color: #888;
+      background: rgba(10,10,15,0.85); padding: 0.4rem 0.8rem;
+      border-radius: 6px; backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+    .info-bar span { color: #7eb8ff; font-weight: 600; }
+
+    .badge {
+      position: absolute; top: 1rem; left: 1rem;
+      background: rgba(126,184,255,0.15); color: #7eb8ff;
+      font-size: 0.65rem; padding: 0.25rem 0.5rem; border-radius: 4px;
+      border: 1px solid rgba(126,184,255,0.25);
+      z-index: 10; opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+
+    .section-divider {
+      border: none; border-top: 1px solid rgba(255,255,255,0.06);
+      margin: 0.25rem 0;
+    }
+
+    .palette-preview {
+      display: flex; gap: 3px; margin-top: 0.25rem;
+    }
+    .palette-preview .swatch {
+      flex: 1; height: 8px; border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous">Lissajous</a>
+        <a href="/spirograph">Spirograph</a>
+        <a href="/particle-life">Life</a>
+        <a href="/noise">Noise</a>
+        <a href="/cellular">Automata</a>
+        <a href="/voronoi">Voronoi</a>
+        <a href="/metaballs">Metaballs</a>
+        <a href="/attract">Attractors</a>
+        <a href="/wave">Waves</a>
+        <a href="/lsystem">L-Systems</a>
+        <a href="/physarum">Physarum</a>
+        <a href="/maze">Maze</a>
+        <a href="/boids" class="active">Boids</a>
+        <a href="/resources">Resources</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="lab-layout">
+    <div class="lab-canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div class="badge" id="badge">S save · R reset · Space pause · D random · C share</div>
+      <div class="info-bar">
+        <div>Boids: <span id="info-count">0</span></div>
+        <div>FPS: <span id="info-fps">0</span></div>
+        <div>Mode: <span id="info-mode">Normal</span></div>
+      </div>
+    </div>
+    <div class="lab-sidebar">
+      <h2>🐦 Boids</h2>
+
+      <h3>Presets</h3>
+      <div class="btn-row">
+        <button class="btn" data-preset="default">Default</button>
+        <button class="btn" data-preset="murmuration">Murmuration</button>
+        <button class="btn" data-preset="predator">Predator</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn" data-preset="chaos">Chaos</button>
+        <button class="btn" data-preset="gentle">Gentle</button>
+        <button class="btn" data-preset="swarm">Swarm</button>
+      </div>
+
+      <hr class="section-divider">
+      <h3>Rules</h3>
+
+      <div class="control-group">
+        <div class="control-label"><span>Separation</span><span class="val" id="val-sep">25</span></div>
+        <input type="range" id="ctrl-sep" min="0" max="80" value="25" step="1">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Alignment</span><span class="val" id="val-ali">15</span></div>
+        <input type="range" id="ctrl-ali" min="0" max="80" value="15" step="1">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Cohesion</span><span class="val" id="val-coh">12</span></div>
+        <input type="range" id="ctrl-coh" min="0" max="80" value="12" step="1">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Perception</span><span class="val" id="val-perc">60</span></div>
+        <input type="range" id="ctrl-perc" min="20" max="150" value="60" step="1">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Max Speed</span><span class="val" id="val-speed">3</span></div>
+        <input type="range" id="ctrl-speed" min="0.5" max="8" value="3" step="0.1">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Max Force</span><span class="val" id="val-force">0.15</span></div>
+        <input type="range" id="ctrl-force" min="0.02" max="0.5" value="0.15" step="0.01">
+      </div>
+
+      <hr class="section-divider">
+      <h3>Population</h3>
+
+      <div class="control-group">
+        <div class="control-label"><span>Boid Count</span><span class="val" id="val-count">150</span></div>
+        <input type="range" id="ctrl-count" min="10" max="800" value="150" step="10">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Flock Count</span><span class="val" id="val-flocks">2</span></div>
+        <input type="range" id="ctrl-flocks" min="1" max="5" value="2" step="1">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Boid Size</span><span class="val" id="val-size">6</span></div>
+        <input type="range" id="ctrl-size" min="2" max="14" value="6" step="1">
+      </div>
+
+      <hr class="section-divider">
+      <h3>Predator</h3>
+      <div class="control-group">
+        <div class="control-label"><span>Predators</span><span class="val" id="val-pred">0</span></div>
+        <input type="range" id="ctrl-pred" min="0" max="5" value="0" step="1">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Predator Speed</span><span class="val" id="val-pred-speed">4</span></div>
+        <input type="range" id="ctrl-pred-speed" min="1" max="10" value="4" step="0.5">
+      </div>
+
+      <hr class="section-divider">
+      <h3>Environment</h3>
+
+      <div class="control-group">
+        <div class="control-label"><span>Wind X</span><span class="val" id="val-windx">0</span></div>
+        <input type="range" id="ctrl-windx" min="-2" max="2" value="0" step="0.05">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Wind Y</span><span class="val" id="val-windy">0</span></div>
+        <input type="range" id="ctrl-windy" min="-2" max="2" value="0" step="0.05">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Trail Length</span><span class="val" id="val-trail">0.08</span></div>
+        <input type="range" id="ctrl-trail" min="0" max="1" value="0.08" step="0.01">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Boundary</span><span class="val" id="val-boundary">Wrap</span></div>
+        <select id="ctrl-boundary">
+          <option value="wrap">Wrap Around</option>
+          <option value="bounce">Bounce</option>
+          <option value="center">Steer Center</option>
+        </select>
+      </div>
+
+      <hr class="section-divider">
+      <h3>Display</h3>
+
+      <div class="control-group">
+        <div class="control-label"><span>Palette</span></div>
+        <select id="ctrl-palette">
+          <option value="flock">Flock Colors</option>
+          <option value="neon">Neon</option>
+          <option value="ocean">Ocean</option>
+          <option value="sunset">Sunset</option>
+          <option value="pastel">Pastel</option>
+          <option value="thermal">Thermal</option>
+          <option value="grayscale">Grayscale</option>
+          <option value="rainbow">Rainbow</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Trails</span><span class="val" id="val-trailon">On</span></div>
+        <select id="ctrl-trailon">
+          <option value="on">On</option>
+          <option value="off">Off</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Direction</span><span class="val" id="val-dir">Off</span></div>
+        <select id="ctrl-dir">
+          <option value="off">Off</option>
+          <option value="on">On</option>
+        </select>
+      </div>
+
+      <hr class="section-divider">
+      <h3>Actions</h3>
+      <div class="btn-row">
+        <button class="btn-action" id="btn-reset">🔄 Reset</button>
+        <button class="btn-action" id="btn-random">🎲 Random</button>
+      </div>
+      <div class="btn-row" style="margin-top:0.4rem;">
+        <button class="btn-action" id="btn-snapshot">📷 Snapshot</button>
+        <button class="btn-action" id="btn-share">🔗 Copy Link</button>
+      </div>
+
+      <div style="font-size:0.7rem; color:#555; margin-top:0.5rem;">
+        Click canvas to add boids. Drag to attract. Shift+click to scatter.
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // ===== Canvas Setup =====
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const wrap = canvas.parentElement;
+      canvas.width = wrap.clientWidth;
+      canvas.height = wrap.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // ===== Parameters =====
+    const P = {
+      separation: 25,
+      alignment: 15,
+      cohesion: 12,
+      perception: 60,
+      maxSpeed: 3,
+      maxForce: 0.15,
+      boidCount: 150,
+      flockCount: 2,
+      boidSize: 6,
+      predatorCount: 0,
+      predatorSpeed: 4,
+      windX: 0,
+      windY: 0,
+      trailAlpha: 0.08,
+      boundary: 'wrap',
+      palette: 'flock',
+      showTrails: true,
+      showDirection: false,
+    };
+
+    // ===== Palettes =====
+    const palettes = {
+      flock: null, // handled per-flock
+      neon: ['#ff006e','#fb5607','#ffbe0b','#8338ec','#3a86ff'],
+      ocean: ['#0077b6','#00b4d8','#90e0ef','#caf0f8','#023e8a'],
+      sunset: ['#ff6b6b','#ee5a24','#f39c12','#e74c3c','#d63031'],
+      pastel: ['#a29bfe','#6c5ce7','#fd79a8','#00cec9','#55efc4'],
+      thermal: ['#ff0000','#ff4500','#ff8c00','#ffd700','#ffff00'],
+      grayscale: ['#ffffff','#cccccc','#999999','#666666','#333333'],
+      rainbow: ['#ff0000','#ff7700','#ffff00','#00ff00','#0000ff','#8b00ff'],
+    };
+
+    // Flock colors for multi-flock mode
+    const flockColors = [
+      { main: '#7eb8ff', dim: 'rgba(126,184,255,', light: '#a8d0ff' },
+      { main: '#ff7eb3', dim: 'rgba(255,126,179,', light: '#ffaad0' },
+      { main: '#7eff8a', dim: 'rgba(126,255,138,', light: '#a8ffb3' },
+      { main: '#ffb347', dim: 'rgba(255,179,71,', light: '#ffcc80' },
+      { main: '#c77dff', dim: 'rgba(199,125,255,', light: '#d9a8ff' },
+    ];
+
+    const predColor = '#ff4444';
+
+    // ===== Presets =====
+    const presets = {
+      default: { separation:25, alignment:15, cohesion:12, perception:60, maxSpeed:3, maxForce:0.15, boidCount:150, flockCount:2, boidSize:6, predatorCount:0, predatorSpeed:4, windX:0, windY:0, trailAlpha:0.08, boundary:'wrap', palette:'flock', showTrails:true, showDirection:false },
+      murmuration: { separation:18, alignment:25, cohesion:22, perception:80, maxSpeed:5, maxForce:0.2, boidCount:400, flockCount:1, boidSize:4, predatorCount:0, predatorSpeed:4, windX:0, windY:0, trailAlpha:0.05, boundary:'wrap', palette:'ocean', showTrails:true, showDirection:false },
+      predator: { separation:20, alignment:12, cohesion:10, perception:60, maxSpeed:3.5, maxForce:0.18, boidCount:200, flockCount:2, boidSize:5, predatorCount:2, predatorSpeed:5, windX:0, windY:0, trailAlpha:0.06, boundary:'wrap', palette:'flock', showTrails:true, showDirection:false },
+      chaos: { separation:40, alignment:5, cohesion:5, perception:40, maxSpeed:6, maxForce:0.4, boidCount:300, flockCount:4, boidSize:5, predatorCount:0, predatorSpeed:4, windX:0.3, windY:-0.2, trailAlpha:0.04, boundary:'bounce', palette:'neon', showTrails:true, showDirection:false },
+      gentle: { separation:30, alignment:20, cohesion:25, perception:100, maxSpeed:1.5, maxForce:0.08, boidCount:100, flockCount:1, boidSize:8, predatorCount:0, predatorSpeed:4, windX:0, windY:0, trailAlpha:0.1, boundary:'wrap', palette:'pastel', showTrails:true, showDirection:false },
+      swarm: { separation:10, alignment:30, cohesion:20, perception:70, maxSpeed:4, maxForce:0.25, boidCount:500, flockCount:3, boidSize:4, predatorCount:1, predatorSpeed:6, windX:0.1, windY:0.1, trailAlpha:0.05, boundary:'center', palette:'thermal', showTrails:true, showDirection:false },
+    };
+
+    // ===== Boid Class =====
+    class Boid {
+      constructor(x, y, flock) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 4;
+        this.vy = (Math.random() - 0.5) * 4;
+        this.flock = flock;
+        this.ax = 0;
+        this.ay = 0;
+      }
+
+      applyForce(fx, fy) {
+        this.ax += fx;
+        this.ay += fy;
+      }
+
+      seek(targetX, targetY, weight) {
+        let dx = targetX - this.x;
+        let dy = targetY - this.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist === 0) return;
+        dx /= dist; dy /= dist;
+        this.applyForce(dx * weight, dy * weight);
+      }
+
+      separate(boids, allBoids) {
+        let steerX = 0, steerY = 0, count = 0;
+        for (const other of allBoids) {
+          if (other === this) continue;
+          let dx = this.x - other.x;
+          let dy = this.y - other.y;
+          let dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < P.separation && dist > 0) {
+            steerX += dx / dist;
+            steerY += dy / dist;
+            count++;
+          }
+        }
+        if (count > 0) {
+          steerX /= count; steerY /= count;
+          let mag = Math.sqrt(steerX * steerX + steerY * steerY);
+          if (mag > 0) {
+            steerX = (steerX / mag) * P.maxSpeed - this.vx;
+            steerY = (steerY / mag) * P.maxSpeed - this.vy;
+            let fMag = Math.sqrt(steerX * steerX + steerY * steerY);
+            if (fMag > P.maxForce) {
+              steerX = (steerX / fMag) * P.maxForce;
+              steerY = (steerY / fMag) * P.maxForce;
+            }
+            this.applyForce(steerX, steerY);
+          }
+        }
+      }
+
+      align(boids) {
+        let steerX = 0, steerY = 0, count = 0;
+        for (const other of boids) {
+          if (other === this) continue;
+          let dx = other.x - this.x;
+          let dy = other.y - this.y;
+          let dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < P.perception) {
+            steerX += other.vx;
+            steerY += other.vy;
+            count++;
+          }
+        }
+        if (count > 0) {
+          steerX /= count; steerY /= count;
+          let mag = Math.sqrt(steerX * steerX + steerY * steerY);
+          if (mag > 0) {
+            steerX = (steerX / mag) * P.maxSpeed - this.vx;
+            steerY = (steerY / mag) * P.maxSpeed - this.vy;
+            let fMag = Math.sqrt(steerX * steerX + steerY * steerY);
+            if (fMag > P.maxForce) {
+              steerX = (steerX / fMag) * P.maxForce;
+              steerY = (steerY / fMag) * P.maxForce;
+            }
+            this.applyForce(steerX, steerY);
+          }
+        }
+      }
+
+      cohere(boids) {
+        let cx = 0, cy = 0, count = 0;
+        for (const other of boids) {
+          if (other === this) continue;
+          let dx = other.x - this.x;
+          let dy = other.y - this.y;
+          let dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < P.perception) {
+            cx += other.x;
+            cy += other.y;
+            count++;
+          }
+        }
+        if (count > 0) {
+          cx /= count; cy /= count;
+          this.seek(cx, cy, 1);
+        }
+      }
+
+      update() {
+        this.vx += this.ax;
+        this.vy += this.ay;
+        let speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (speed > P.maxSpeed) {
+          this.vx = (this.vx / speed) * P.maxSpeed;
+          this.vy = (this.vy / speed) * P.maxSpeed;
+        }
+        this.x += this.vx;
+        this.y += this.vy;
+        this.ax = 0;
+        this.ay = 0;
+
+        // Boundary handling
+        const W = canvas.width, H = canvas.height;
+        if (P.boundary === 'wrap') {
+          if (this.x < 0) this.x = W;
+          if (this.x > W) this.x = 0;
+          if (this.y < 0) this.y = H;
+          if (this.y > H) this.y = 0;
+        } else if (P.boundary === 'bounce') {
+          if (this.x < 0 || this.x > W) { this.vx *= -1; this.x = Math.max(0, Math.min(W, this.x)); }
+          if (this.y < 0 || this.y > H) { this.vy *= -1; this.y = Math.max(0, Math.min(H, this.y)); }
+        } else if (P.boundary === 'center') {
+          if (this.x < 50) this.applyForce(0.1, 0);
+          if (this.x > W - 50) this.applyForce(-0.1, 0);
+          if (this.y < 50) this.applyForce(0, 0.1);
+          if (this.y > H - 50) this.applyForce(0, -0.1);
+        }
+      }
+
+      draw() {
+        const color = this.getColor();
+        const angle = Math.atan2(this.vy, this.vx);
+        const size = P.boidSize;
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(angle);
+
+        // Draw triangle boid
+        ctx.beginPath();
+        ctx.moveTo(size * 1.4, 0);
+        ctx.lineTo(-size * 0.8, -size * 0.6);
+        ctx.lineTo(-size * 0.8, size * 0.6);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        if (P.showDirection) {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(size * 2, 0);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+
+      getColor() {
+        if (P.palette === 'flock') {
+          return flockColors[this.flock % flockColors.length].main;
+        }
+        const pal = palettes[P.palette];
+        if (!pal) return flockColors[this.flock % flockColors.length].main;
+        const idx = this.flock % pal.length;
+        return pal[idx];
+      }
+    }
+
+    // ===== Predator =====
+    class Predator {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 4;
+        this.vy = (Math.random() - 0.5) * 4;
+        this.target = null;
+      }
+
+      update(boids) {
+        // Find nearest boid
+        let minDist = Infinity;
+        let nearest = null;
+        for (const b of boids) {
+          const dx = b.x - this.x;
+          const dy = b.y - this.y;
+          const d = dx * dx + dy * dy;
+          if (d < minDist) {
+            minDist = d;
+            nearest = b;
+          }
+        }
+
+        if (nearest) {
+          const dx = nearest.x - this.x;
+          const dy = nearest.y - this.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0) {
+            this.vx += (dx / dist) * 0.15;
+            this.vy += (dy / dist) * 0.15;
+          }
+        }
+
+        let speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (speed > P.predatorSpeed) {
+          this.vx = (this.vx / speed) * P.predatorSpeed;
+          this.vy = (this.vy / speed) * P.predatorSpeed;
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Wrap
+        if (this.x < 0) this.x = canvas.width;
+        if (this.x > canvas.width) this.x = 0;
+        if (this.y < 0) this.y = canvas.height;
+        if (this.y > canvas.height) this.y = 0;
+
+        // Eat nearby boids (within 10px)
+        for (let i = boids.length - 1; i >= 0; i--) {
+          const b = boids[i];
+          const dx = b.x - this.x;
+          const dy = b.y - this.y;
+          if (dx * dx + dy * dy < 100) {
+            boids.splice(i, 1);
+          }
+        }
+      }
+
+      draw() {
+        const size = P.boidSize * 1.5;
+        const angle = Math.atan2(this.vy, this.vx);
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(angle);
+
+        // Red triangle
+        ctx.beginPath();
+        ctx.moveTo(size * 1.6, 0);
+        ctx.lineTo(-size * 0.8, -size * 0.8);
+        ctx.lineTo(-size * 0.8, size * 0.8);
+        ctx.closePath();
+        ctx.fillStyle = predColor;
+        ctx.fill();
+
+        // Glow
+        ctx.shadowColor = predColor;
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.restore();
+      }
+    }
+
+    // ===== State =====
+    let boids = [];
+    let predators = [];
+    let paused = false;
+    let animId = null;
+    let lastFrame = 0;
+    let frameCount = 0;
+    let fps = 0;
+    let fpsTimer = 0;
+
+    // ===== Init =====
+    function init() {
+      boids = [];
+      predators = [];
+      const W = canvas.width, H = canvas.height;
+
+      const boidsPerFlock = Math.floor(P.boidCount / P.flockCount);
+      for (let f = 0; f < P.flockCount; f++) {
+        const cx = W * (0.25 + 0.5 * (f % 3));
+        const cy = H * (0.25 + 0.5 * Math.floor(f / 3));
+        for (let i = 0; i < boidsPerFlock; i++) {
+          boids.push(new Boid(
+            cx + (Math.random() - 0.5) * 100,
+            cy + (Math.random() - 0.5) * 100,
+            f
+          ));
+        }
+      }
+
+      for (let i = 0; i < P.predatorCount; i++) {
+        predators.push(new Predator());
+      }
+
+      // Reset canvas
+      ctx.fillStyle = '#0a0a0f';
+      ctx.fillRect(0, 0, W, H);
+
+      updateInfoBar();
+    }
+
+    // ===== Simulation Step =====
+    function step() {
+      const allBoids = boids;
+
+      // Apply forces per flock
+      for (let f = 0; f < P.flockCount; f++) {
+        const flockBoids = allBoids.filter(b => b.flock === f);
+        for (const boid of flockBoids) {
+          boid.separate(flockBoids, allBoids);
+          boid.align(flockBoids);
+          boid.cohere(flockBoids);
+        }
+      }
+
+      // Wind
+      if (P.windX !== 0 || P.windY !== 0) {
+        for (const boid of allBoids) {
+          boid.applyForce(P.windX * 0.1, P.windY * 0.1);
+        }
+      }
+
+      // Predator avoidance
+      if (predators.length > 0) {
+        for (const boid of allBoids) {
+          for (const pred of predators) {
+            const dx = boid.x - pred.x;
+            const dy = boid.y - pred.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < P.perception * 2 && dist > 0) {
+              boid.applyForce((dx / dist) * 0.8, (dy / dist) * 0.8);
+            }
+          }
+        }
+      }
+
+      // Update
+      for (const boid of allBoids) boid.update();
+      for (const pred of predators) pred.update(allBoids);
+
+      // Update predator count if needed
+      while (predators.length < P.predatorCount) predators.push(new Predator());
+      while (predators.length > P.predatorCount) predators.pop();
+    }
+
+    // ===== Render =====
+    function render() {
+      const W = canvas.width, H = canvas.height;
+
+      // Trail fade
+      if (P.showTrails) {
+        ctx.fillStyle = `rgba(10,10,15,${P.trailAlpha})`;
+        ctx.fillRect(0, 0, W, H);
+      } else {
+        ctx.fillStyle = '#0a0a0f';
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // Draw boids
+      for (const boid of boids) boid.draw();
+
+      // Draw predators
+      for (const pred of predators) pred.draw();
+
+      // Spawn text
+      if (boids.length < 5) {
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.font = '16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Click to add boids!', W / 2, H / 2);
+      }
+    }
+
+    // ===== Loop =====
+    function loop(ts) {
+      animId = requestAnimationFrame(loop);
+
+      // FPS counter
+      frameCount++;
+      if (ts - fpsTimer > 1000) {
+        fps = frameCount;
+        frameCount = 0;
+        fpsTimer = ts;
+        document.getElementById('info-fps').textContent = fps;
+      }
+
+      if (!paused) {
+        step();
+        render();
+        document.getElementById('info-count').textContent = boids.length;
+      }
+    }
+
+    function updateInfoBar() {
+      document.getElementById('info-count').textContent = boids.length;
+    }
+
+    // ===== Controls =====
+    const ctrlMap = {
+      'ctrl-sep': { param: 'separation', label: 'val-sep', step: null },
+      'ctrl-ali': { param: 'alignment', label: 'val-ali', step: null },
+      'ctrl-coh': { param: 'cohesion', label: 'val-coh', step: null },
+      'ctrl-perc': { param: 'perception', label: 'val-perc', step: null },
+      'ctrl-speed': { param: 'maxSpeed', label: 'val-speed', step: null },
+      'ctrl-force': { param: 'maxForce', label: 'val-force', step: null },
+      'ctrl-count': { param: 'boidCount', label: 'val-count', step: null },
+      'ctrl-flocks': { param: 'flockCount', label: 'val-flocks', step: null },
+      'ctrl-size': { param: 'boidSize', label: 'val-size', step: null },
+      'ctrl-pred': { param: 'predatorCount', label: 'val-pred', step: null },
+      'ctrl-pred-speed': { param: 'predatorSpeed', label: 'val-pred-speed', step: null },
+      'ctrl-windx': { param: 'windX', label: 'val-windx', step: null },
+      'ctrl-windy': { param: 'windY', label: 'val-windy', step: null },
+      'ctrl-trail': { param: 'trailAlpha', label: 'val-trail', step: null },
+    };
+
+    for (const [id, cfg] of Object.entries(ctrlMap)) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      el.addEventListener('input', () => {
+        P[cfg.param] = parseFloat(el.value);
+        document.getElementById(cfg.label).textContent = el.value;
+        // Reinit if count or flocks changed
+        if (cfg.param === 'boidCount' || cfg.param === 'flockCount') {
+          init();
+        }
+      });
+    }
+
+    document.getElementById('ctrl-boundary').addEventListener('change', (e) => {
+      P.boundary = e.target.value;
+      document.getElementById('val-boundary').textContent = e.target.options[e.target.selectedIndex].text;
+    });
+
+    document.getElementById('ctrl-palette').addEventListener('change', (e) => {
+      P.palette = e.target.value;
+    });
+
+    document.getElementById('ctrl-trailon').addEventListener('change', (e) => {
+      P.showTrails = e.target.value === 'on';
+      document.getElementById('val-trailon').textContent = e.target.value === 'on' ? 'On' : 'Off';
+    });
+
+    document.getElementById('ctrl-dir').addEventListener('change', (e) => {
+      P.showDirection = e.target.value === 'on';
+      document.getElementById('val-dir').textContent = e.target.value === 'on' ? 'On' : 'Off';
+    });
+
+    // Presets
+    document.querySelectorAll('[data-preset]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = presets[btn.dataset.preset];
+        if (!p) return;
+        Object.assign(P, p);
+        syncControls();
+        init();
+      });
+    });
+
+    function syncControls() {
+      for (const [id, cfg] of Object.entries(ctrlMap)) {
+        const el = document.getElementById(id);
+        if (el) {
+          el.value = P[cfg.param];
+          document.getElementById(cfg.label).textContent = P[cfg.param];
+        }
+      }
+      document.getElementById('ctrl-boundary').value = P.boundary;
+      document.getElementById('val-boundary').textContent = P.boundary === 'wrap' ? 'Wrap' : P.boundary === 'bounce' ? 'Bounce' : 'Center';
+      document.getElementById('ctrl-palette').value = P.palette;
+      document.getElementById('ctrl-trailon').value = P.showTrails ? 'on' : 'off';
+      document.getElementById('val-trailon').textContent = P.showTrails ? 'On' : 'Off';
+      document.getElementById('ctrl-dir').value = P.showDirection ? 'on' : 'off';
+      document.getElementById('val-dir').textContent = P.showDirection ? 'On' : 'Off';
+    }
+
+    // Actions
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      init();
+    });
+
+    document.getElementById('btn-random').addEventListener('click', () => {
+      const presetNames = Object.keys(presets);
+      const name = presetNames[Math.floor(Math.random() * presetNames.length)];
+      const p = presets[name];
+      Object.assign(P, p);
+      syncControls();
+      init();
+    });
+
+    document.getElementById('btn-snapshot').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = 'boids-' + Date.now() + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+
+    document.getElementById('btn-share').addEventListener('click', () => {
+      if (typeof shareUrl === 'function') {
+        shareUrl('boids', P);
+      } else {
+        // Fallback: encode params as base64
+        const json = JSON.stringify(P);
+        const b64 = btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        const url = window.location.origin + '/boids#' + b64;
+        navigator.clipboard.writeText(url).then(() => {
+          document.getElementById('btn-share').textContent = '✓ Copied!';
+          setTimeout(() => { document.getElementById('btn-share').textContent = '🔗 Copy Link'; }, 2000);
+        });
+      }
+    });
+
+    // ===== Canvas Interaction =====
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (e.shiftKey) {
+        // Scatter: push nearby boids away
+        for (const b of boids) {
+          const dx = b.x - x;
+          const dy = b.y - y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 100 && dist > 0) {
+            b.applyForce((dx / dist) * 3, (dy / dist) * 3);
+          }
+        }
+      } else {
+        // Add boids
+        const flock = Math.floor(Math.random() * P.flockCount);
+        for (let i = 0; i < 10; i++) {
+          boids.push(new Boid(
+            x + (Math.random() - 0.5) * 30,
+            y + (Math.random() - 0.5) * 30,
+            flock
+          ));
+        }
+      }
+      updateInfoBar();
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (e.buttons !== 1) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Attract nearby boids
+      for (const b of boids) {
+        const dx = x - b.x;
+        const dy = y - b.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 80 && dist > 0) {
+          b.applyForce((dx / dist) * 0.3, (dy / dist) * 0.3);
+        }
+      }
+    });
+
+    // ===== Keyboard Shortcuts =====
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        paused = !paused;
+        document.getElementById('info-mode').textContent = paused ? 'Paused' : 'Normal';
+      } else if (e.key === 's' || e.key === 'S') {
+        document.getElementById('btn-snapshot').click();
+      } else if (e.key === 'r' || e.key === 'R') {
+        init();
+      } else if (e.key === 'd' || e.key === 'D') {
+        document.getElementById('btn-random').click();
+      } else if (e.key === 'c' || e.key === 'C') {
+        document.getElementById('btn-share').click();
+      } else if (e.key === 'Delete') {
+        boids = [];
+        predators = [];
+        init();
+      }
+    });
+
+    // ===== URL Share Restore =====
+    function tryRestoreFromHash() {
+      if (!window.location.hash) return;
+      try {
+        const hash = window.location.hash.substring(1);
+        const json = atob(hash.replace(/-/g, '+').replace(/_/g, '/'));
+        const data = JSON.parse(json);
+        Object.assign(P, data);
+        syncControls();
+        init();
+        return true;
+      } catch (e) {}
+      return false;
+    }
+
+    function tryRestoreFromParams() {
+      const params = new URLSearchParams(window.location.search);
+      const keys = Object.keys(P);
+      let changed = false;
+      for (const key of keys) {
+        if (params.has(key)) {
+          const val = params.get(key);
+          if (typeof P[key] === 'boolean') {
+            P[key] = val === 'true';
+          } else if (typeof P[key] === 'number') {
+            P[key] = parseFloat(val);
+          } else {
+            P[key] = val;
+          }
+          changed = true;
+        }
+      }
+      if (changed) {
+        syncControls();
+        init();
+        return true;
+      }
+      return false;
+    }
+
+    // ===== Share function =====
+    window.shareUrl = function(page, params) {
+      const json = JSON.stringify(params);
+      const b64 = btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const url = window.location.origin + '/' + page + '#' + b64;
+      navigator.clipboard.writeText(url).then(() => {
+        document.getElementById('btn-share').textContent = '✓ Copied!';
+        setTimeout(() => { document.getElementById('btn-share').textContent = '🔗 Copy Link'; }, 2000);
+      }).catch(() => {
+        window.prompt('Copy this link:', url);
+      });
+    };
+
+    // ===== Badge fade =====
+    setTimeout(() => {
+      const badge = document.getElementById('badge');
+      if (badge) badge.style.opacity = '0';
+    }, 5000);
+
+    // ===== Start =====
+    tryRestoreFromHash() || tryRestoreFromParams() || init();
+    animId = requestAnimationFrame(loop);
+
+  })();
+  </script>
+</body>
+</html>
