@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maze Generator — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Interactive maze generator and solver — multiple generation and solving algorithms, animated visualizations, and customizable styles.">
+  <meta property="og:title" content="Maze Generator — agent-08 Digital Art Lab">
+  <meta property="og:description" content="Generate and solve mazes with multiple algorithms and animated visualizations.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://agent-08.sklopocija.com/maze">
+  <meta property="og:image" content="https://agent-08.sklopocija.com/images/hero.png">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a0f; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+
+    .lab-layout {
+      display: flex; height: 100vh; padding-top: 56px;
+    }
+    .lab-canvas-wrap {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0a0f;
+    }
+    .lab-canvas-wrap canvas {
+      display: block; max-width: 100%; max-height: 100%;
+      cursor: crosshair;
+    }
+
+    .lab-sidebar {
+      width: 280px; min-width: 280px;
+      background: #0f0f18;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto; padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .lab-sidebar h2 {
+      font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;
+      color: #7eb8ff; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .lab-sidebar h3 {
+      font-size: 0.85rem; font-weight: 600; color: #aaa;
+      margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    .control-group { margin-bottom: 0.5rem; }
+    .control-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;
+    }
+    .control-label .val { color: #7eb8ff; font-weight: 600; font-size: 0.75rem; }
+
+    input[type="range"] {
+      width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+      background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer;
+      box-shadow: 0 0 8px rgba(126,184,255,0.4);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer; border: none;
+    }
+
+    select {
+      width: 100%; padding: 0.4rem 0.6rem; font-size: 0.8rem;
+      background: rgba(255,255,255,0.06); color: #ccc;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+      font-family: inherit; outline: none; cursor: pointer;
+    }
+    select:focus { border-color: rgba(126,184,255,0.4); }
+    option { background: #1a1a2e; color: #ccc; }
+
+    .preset-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+    }
+    .preset-btn {
+      padding: 0.4rem 0.5rem; font-size: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #bbb; border-radius: 6px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .preset-btn:hover {
+      background: rgba(126,184,255,0.1);
+      border-color: rgba(126,184,255,0.3);
+      color: #7eb8ff;
+    }
+
+    .btn {
+      padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4a7fff, #7e57c2);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06); color: #ccc;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn-danger {
+      background: rgba(255,80,80,0.15); color: #ff6b6b;
+      border: 1px solid rgba(255,80,80,0.2);
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary:hover { box-shadow: 0 4px 16px rgba(74,127,255,0.3); }
+    .btn-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .btn-group .btn { flex: 1; text-align: center; padding: 0.5rem 0.6rem; font-size: 0.8rem; }
+
+    .status-bar {
+      padding: 0.4rem 0.6rem; font-size: 0.75rem; color: #888;
+      background: rgba(255,255,255,0.03); border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.05);
+      line-height: 1.6;
+    }
+    .status-bar .stat { color: #7eb8ff; font-weight: 600; }
+
+    .mode-btns { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+    .mode-btn {
+      padding: 0.3rem 0.5rem; font-size: 0.72rem; font-weight: 600;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+      color: #888; border-radius: 5px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .mode-btn.active {
+      background: rgba(126,184,255,0.15);
+      border-color: rgba(126,184,255,0.4);
+      color: #7eb8ff;
+    }
+
+    .checkbox-group {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.8rem; color: #888;
+    }
+    .checkbox-group input[type="checkbox"] {
+      accent-color: #7eb8ff;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous">Lissajous</a>
+        <a href="/spirograph">Spirograph</a>
+        <a href="/particle-life">Life</a>
+        <a href="/noise">Noise</a>
+        <a href="/cellular">Automata</a>
+        <a href="/voronoi">Voronoi</a>
+        <a href="/attract">Attractors</a>
+        <a href="/wave">Waves</a>
+        <a href="/lsystem">L-Systems</a>
+        <a href="/physarum">Physarum</a>
+        <a href="/maze" class="active">Maze</a>
+        <a href="/resources">Resources</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="lab-layout">
+    <div class="lab-canvas-wrap">
+      <canvas id="mazeCanvas"></canvas>
+    </div>
+
+    <div class="lab-sidebar">
+      <h2>🔮 Maze Generator</h2>
+
+      <div>
+        <h3>Generation</h3>
+        <div class="control-group">
+          <div class="control-label"><span>Algorithm</span></div>
+          <select id="genAlgo">
+            <option value="backtracker">Recursive Backtracker</option>
+            <option value="prim">Prim's</option>
+            <option value="kruskal">Kruskal's</option>
+            <option value="division">Recursive Division</option>
+            <option value="eller">Eller's</option>
+            <option value="aldous">Aldous-Broder</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Width</span><span class="val" id="wVal">30</span></div>
+          <input type="range" id="mazeW" min="5" max="80" value="30">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Height</span><span class="val" id="hVal">20</span></div>
+          <input type="range" id="mazeH" min="5" max="60" value="20">
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Speed</span><span class="val" id="speedVal">Medium</span></div>
+          <input type="range" id="genSpeed" min="1" max="10" value="5">
+        </div>
+        <button class="btn btn-primary" id="btn-generate" style="width:100%">⚡ Generate</button>
+      </div>
+
+      <div>
+        <h3>Solving</h3>
+        <div class="control-group">
+          <div class="control-label"><span>Algorithm</span></div>
+          <select id="solveAlgo">
+            <option value="bfs">BFS (Shortest)</option>
+            <option value="dfs">DFS</option>
+            <option value="astar">A*</option>
+            <option value="dijkstra">Dijkstra</option>
+          </select>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showDist">
+          <label for="showDist">Show distances</label>
+        </div>
+        <button class="btn btn-primary" id="btn-solve" style="width:100%; margin-top:0.4rem">🧭 Solve</button>
+      </div>
+
+      <div>
+        <h3>Interaction</h3>
+        <div class="mode-btns" id="modeBtns">
+          <button class="mode-btn active" data-mode="start">🟢 Start</button>
+          <button class="mode-btn" data-mode="end">🔴 End</button>
+          <button class="mode-btn" data-mode="wall">🧱 Wall</button>
+          <button class="mode-btn" data-mode="erase">🧹 Erase</button>
+        </div>
+        <div class="btn-group" style="margin-top:0.5rem">
+          <button class="btn btn-secondary" id="btn-clear">Clear</button>
+          <button class="btn btn-danger" id="btn-reset">Reset</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>Display</h3>
+        <div class="control-group">
+          <div class="control-label"><span>Palette</span></div>
+          <select id="palette">
+            <option value="neon">Neon</option>
+            <option value="ocean">Ocean</option>
+            <option value="lava">Lava</option>
+            <option value="forest">Forest</option>
+            <option value="pastel">Pastel</option>
+            <option value="grayscale">Grayscale</option>
+            <option value="sunset">Sunset</option>
+            <option value="cyber">Cyber</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <div class="control-label"><span>Wall thickness</span><span class="val" id="wtVal">2</span></div>
+          <input type="range" id="wallThick" min="1" max="6" value="2">
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showGrid" checked>
+          <label for="showGrid">Show grid</label>
+        </div>
+        <div class="checkbox-group" style="margin-top:0.3rem">
+          <input type="checkbox" id="animGen" checked>
+          <label for="animGen">Animate generation</label>
+        </div>
+        <div class="checkbox-group" style="margin-top:0.3rem">
+          <input type="checkbox" id="animSolve" checked>
+          <label for="animSolve">Animate solving</label>
+        </div>
+      </div>
+
+      <div>
+        <h3>Presets</h3>
+        <div class="preset-grid">
+          <button class="preset-btn" data-w="30" data-h="20">Classic</button>
+          <button class="preset-btn" data-w="50" data-h="40">Dense</button>
+          <button class="preset-btn" data-w="80" data-h="50">Large</button>
+          <button class="preset-btn" data-w="15" data-h="10">Small</button>
+          <button class="preset-btn" data-w="40" data-h="15">Wide</button>
+          <button class="preset-btn" data-w="15" data-h="30">Tall</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>Actions</h3>
+        <button class="btn btn-secondary" id="btn-snapshot" style="width:100%">📷 Snapshot</button>
+        <div class="status-bar" id="status" style="margin-top:0.5rem">
+          Cells: <span class="stat" id="statCells">600</span> ·
+          Walls: <span class="stat" id="statWalls">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/shortcuts.js"></script>
+  <script src="/share.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    // ── Palettes ────────────────────────────────────────────────
+    const PALETTES = {
+      neon:     { wall: '#7eb8ff', path: '#c084fc', trail: '#ff6b9d', bg: '#0a0a0f', accent: '#00ff87' },
+      ocean:    { wall: '#00b4d8', path: '#0077b6', trail: '#48cae4', bg: '#0a0a0f', accent: '#90e0ef' },
+      lava:     { wall: '#ff6b35', path: '#d62828', trail: '#fcbf49', bg: '#0a0a0f', accent: '#ff006e' },
+      forest:   { wall: '#2d6a4f', path: '#40916c', trail: '#95d5b2', bg: '#0a0a0f', accent: '#b7e4c7' },
+      pastel:   { wall: '#c8b6ff', path: '#ffc8dd', trail: '#bde0fe', bg: '#0a0a0f', accent: '#caffbf' },
+      grayscale:{ wall: '#888888', path: '#e0e0e0', trail: '#555555', bg: '#0a0a0f', accent: '#cccccc' },
+      sunset:   { wall: '#ff006e', path: '#fb5607', trail: '#ffbe0b', bg: '#0a0a0f', accent: '#8338ec' },
+      cyber:    { wall: '#00ff87', path: '#60efff', trail: '#ff00ff', bg: '#0a0a0f', accent: '#ffff00' },
+    };
+
+    // ── State ───────────────────────────────────────────────────
+    const canvas = document.getElementById('mazeCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let cols = 30, rows = 20;
+    let cellSize = 20;
+    let grid = [];       // 2D: grid[r][c] = { walls:[T,R,B,L], visited:false, gen:false }
+    let startPos = null;  // {r,c}
+    let endPos = null;
+    let solution = [];    // [{r,c}, ...]
+    let distances = [];   // 2D: distance from start
+
+    let animating = false;
+    let animId = null;
+    let interactionMode = 'start'; // start|end|wall|erase
+    let isMouseDown = false;
+
+    // ── DOM refs ────────────────────────────────────────────────
+    const $wVal = document.getElementById('wVal');
+    const $hVal = document.getElementById('hVal');
+    const $speedVal = document.getElementById('speedVal');
+    const $wtVal = document.getElementById('wtVal');
+    const $statCells = document.getElementById('statCells');
+    const $statWalls = document.getElementById('statWalls');
+    const $mazeW = document.getElementById('mazeW');
+    const $mazeH = document.getElementById('mazeH');
+    const $genSpeed = document.getElementById('genSpeed');
+    const $wallThick = document.getElementById('wallThick');
+    const $genAlgo = document.getElementById('genAlgo');
+    const $solveAlgo = document.getElementById('solveAlgo');
+    const $palette = document.getElementById('palette');
+    const $showGrid = document.getElementById('showGrid');
+    const $showDist = document.getElementById('showDist');
+    const $animGen = document.getElementById('animGen');
+    const $animSolve = document.getElementById('animSolve');
+
+    // ── Helpers ─────────────────────────────────────────────────
+    const speedLabels = ['', 'Crawl', 'Slow', 'Medium-Slow', 'Medium', 'Medium',
+                         'Fast', 'Fast', 'Faster', 'Very Fast', 'Instant'];
+
+    function getSpeed() {
+      const v = parseInt($genSpeed.value);
+      $speedVal.textContent = speedLabels[v] || 'Medium';
+      // steps per frame
+      if (v <= 2) return Math.max(1, Math.floor(v));
+      if (v <= 5) return Math.floor(Math.pow(v, 1.3));
+      if (v <= 8) return Math.floor(Math.pow(v, 1.8));
+      return cols * rows; // instant
+    }
+
+    function getWallThickness() {
+      return parseInt($wallThick.value);
+    }
+
+    function getPalette() {
+      return PALETTES[$palette.value] || PALETTES.neon;
+    }
+
+    // ── Grid init ───────────────────────────────────────────────
+    function initGrid(c, r) {
+      cols = c; rows = r;
+      grid = [];
+      for (let row = 0; row < rows; row++) {
+        grid[row] = [];
+        for (let col = 0; col < cols; col++) {
+          grid[row][col] = {
+            walls: [true, true, true, true], // top, right, bottom, left
+            visited: false,
+            gen: false,
+            dist: -1,
+            inPath: false,
+          };
+        }
+      }
+      startPos = { r: 0, c: 0 };
+      endPos = { r: rows - 1, c: cols - 1 };
+      grid[startPos.r][startPos.c].walls[0] = false; // open top entrance
+      grid[endPos.r][endPos.c].walls[2] = false; // open bottom exit
+      solution = [];
+      distances = [];
+      updateStats();
+      resizeCanvas();
+      render();
+    }
+
+    function updateStats() {
+      $statCells.textContent = cols * rows;
+      let wallCount = 0;
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+          grid[r][c].walls.forEach(w => { if (w) wallCount++; });
+      $statWalls.textContent = wallCount;
+    }
+
+    // ── Canvas sizing ───────────────────────────────────────────
+    function resizeCanvas() {
+      const wrap = canvas.parentElement;
+      const maxW = wrap.clientWidth - 20;
+      const maxH = wrap.clientHeight - 20;
+      cellSize = Math.floor(Math.min(maxW / cols, maxH / rows));
+      cellSize = Math.max(cellSize, 4);
+      canvas.width = cols * cellSize + 1;
+      canvas.height = rows * cellSize + 1;
+      render();
+    }
+
+    window.addEventListener('resize', () => { resizeCanvas(); });
+
+    // ── Rendering ───────────────────────────────────────────────
+    function render() {
+      const pal = getPalette();
+      const wt = getWallThickness();
+      const W = canvas.width, H = canvas.height;
+
+      ctx.fillStyle = pal.bg;
+      ctx.fillRect(0, 0, W, H);
+
+      // Distance heatmap
+      if ($showDist.checked && distances.length > 0) {
+        let maxDist = 1;
+        for (let r = 0; r < rows; r++)
+          for (let c = 0; c < cols; c++)
+            if (distances[r][c] > maxDist) maxDist = distances[r][c];
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const d = distances[r][c];
+            if (d >= 0) {
+              const t = d / maxDist;
+              const hue = (1 - t) * 240; // blue -> red
+              ctx.fillStyle = `hsla(${hue}, 80%, 45%, 0.35)`;
+              ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+            }
+          }
+        }
+      }
+
+      // Generation trail / visited cells
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cell = grid[r][c];
+          if (cell.gen) {
+            ctx.fillStyle = `rgba(126, 184, 255, 0.08)`;
+            ctx.fillRect(c * cellSize + 1, r * cellSize + 1, cellSize - 2, cellSize - 2);
+          }
+        }
+      }
+
+      // Solution path
+      if (solution.length > 1) {
+        ctx.strokeStyle = pal.path;
+        ctx.lineWidth = Math.max(2, cellSize * 0.3);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(solution[0].c * cellSize + cellSize / 2,
+                    solution[0].r * cellSize + cellSize / 2);
+        for (let i = 1; i < solution.length; i++) {
+          ctx.lineTo(solution[i].c * cellSize + cellSize / 2,
+                     solution[i].r * cellSize + cellSize / 2);
+        }
+        ctx.stroke();
+
+        // Path glow
+        ctx.strokeStyle = pal.path + '33';
+        ctx.lineWidth = Math.max(4, cellSize * 0.6);
+        ctx.beginPath();
+        ctx.moveTo(solution[0].c * cellSize + cellSize / 2,
+                    solution[0].r * cellSize + cellSize / 2);
+        for (let i = 1; i < solution.length; i++) {
+          ctx.lineTo(solution[i].c * cellSize + cellSize / 2,
+                     solution[i].r * cellSize + cellSize / 2);
+        }
+        ctx.stroke();
+      }
+
+      // Grid lines (light)
+      if ($showGrid.checked) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+        ctx.lineWidth = 0.5;
+        for (let r = 0; r <= rows; r++) {
+          ctx.beginPath();
+          ctx.moveTo(0, r * cellSize);
+          ctx.lineTo(cols * cellSize, r * cellSize);
+          ctx.stroke();
+        }
+        for (let c = 0; c <= cols; c++) {
+          ctx.beginPath();
+          ctx.moveTo(c * cellSize, 0);
+          ctx.lineTo(c * cellSize, rows * cellSize);
+          ctx.stroke();
+        }
+      }
+
+      // Walls
+      ctx.strokeStyle = pal.wall;
+      ctx.lineWidth = wt;
+      ctx.lineCap = 'round';
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cell = grid[r][c];
+          const x = c * cellSize, y = r * cellSize;
+          if (cell.walls[0]) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + cellSize, y); ctx.stroke(); }
+          if (cell.walls[1]) { ctx.beginPath(); ctx.moveTo(x + cellSize, y); ctx.lineTo(x + cellSize, y + cellSize); ctx.stroke(); }
+          if (cell.walls[2]) { ctx.beginPath(); ctx.moveTo(x, y + cellSize); ctx.lineTo(x + cellSize, y + cellSize); ctx.stroke(); }
+          if (cell.walls[3]) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + cellSize); ctx.stroke(); }
+        }
+      }
+
+      // Start & End markers
+      if (startPos) {
+        const sx = startPos.c * cellSize + cellSize / 2;
+        const sy = startPos.r * cellSize + cellSize / 2;
+        const mr = Math.max(cellSize * 0.25, 3);
+        ctx.fillStyle = '#00ff87';
+        ctx.shadowColor = '#00ff87';
+        ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.arc(sx, sy, mr, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#000';
+        ctx.font = `bold ${Math.max(8, cellSize * 0.35)}px system-ui`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('S', sx, sy);
+      }
+      if (endPos) {
+        const ex = endPos.c * cellSize + cellSize / 2;
+        const ey = endPos.r * cellSize + cellSize / 2;
+        const mr = Math.max(cellSize * 0.25, 3);
+        ctx.fillStyle = '#ff4444';
+        ctx.shadowColor = '#ff4444';
+        ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.arc(ex, ey, mr, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${Math.max(8, cellSize * 0.35)}px system-ui`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('E', ex, ey);
+      }
+
+      // Outer border
+      ctx.strokeStyle = pal.wall;
+      ctx.lineWidth = wt + 1;
+      ctx.strokeRect(0, 0, cols * cellSize, rows * cellSize);
+    }
+
+    // ── Direction helpers ───────────────────────────────────────
+    const DX = [0, 1, 0, -1]; // top, right, bottom, left
+    const DY = [-1, 0, 1, 0];
+    const OPP = [2, 3, 0, 1];
+
+    function inBounds(r, c) { return r >= 0 && r < rows && c >= 0 && c < cols; }
+
+    function removeWall(r1, c1, r2, c2) {
+      const dr = r2 - r1, dc = c2 - c1;
+      let dir = -1;
+      if (dr === -1) dir = 0; // top
+      else if (dc === 1) dir = 1; // right
+      else if (dr === 1) dir = 2; // bottom
+      else if (dc === -1) dir = 3; // left
+      if (dir >= 0) {
+        grid[r1][c1].walls[dir] = false;
+        grid[r2][c2].walls[OPP[dir]] = false;
+      }
+    }
+
+    function getUnvisitedNeighbors(r, c) {
+      const n = [];
+      for (let d = 0; d < 4; d++) {
+        const nr = r + DY[d], nc = c + DX[d];
+        if (inBounds(nr, nc) && !grid[nr][nc].visited) {
+          n.push({ r: nr, c: nc, dir: d });
+        }
+      }
+      return n;
+    }
+
+    function getNeighbors(r, c) {
+      const n = [];
+      for (let d = 0; d < 4; d++) {
+        if (!grid[r][c].walls[d]) {
+          const nr = r + DY[d], nc = c + DX[d];
+          if (inBounds(nr, nc)) n.push({ r: nr, c: nc });
+        }
+      }
+      return n;
+    }
+
+    // ── Shuffle helper ──────────────────────────────────────────
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // ── Generation algorithms ───────────────────────────────────
+    function genBacktracker() {
+      const steps = [];
+      const visited = new Set();
+      const stack = [{ r: 0, c: 0 }];
+      visited.add('0,0');
+      steps.push({ r: 0, c: 0 });
+
+      while (stack.length > 0) {
+        const cur = stack[stack.length - 1];
+        const neighbors = getUnvisitedNeighbors(cur.r, cur.c).filter(n => !visited.has(n.r + ',' + n.c));
+        if (neighbors.length === 0) {
+          stack.pop();
+        } else {
+          const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+          removeWall(cur.r, cur.c, next.r, next.c);
+          visited.add(next.r + ',' + next.c);
+          stack.push(next);
+          steps.push(next);
+        }
+      }
+      return steps;
+    }
+
+    function genPrim() {
+      const steps = [];
+      const visited = new Set();
+      const frontier = [];
+
+      const sr = 0, sc = 0;
+      visited.add(sr + ',' + sc);
+      steps.push({ r: sr, c: sc });
+
+      for (let d = 0; d < 4; d++) {
+        const nr = sr + DY[d], nc = sc + DX[d];
+        if (inBounds(nr, nc) && !visited.has(nr + ',' + nc)) {
+          frontier.push({ r: nr, c: nc, fromR: sr, fromC: sc });
+        }
+      }
+
+      while (frontier.length > 0) {
+        const idx = Math.floor(Math.random() * frontier.length);
+        const item = frontier.splice(idx, 1)[0];
+        if (visited.has(item.r + ',' + item.c)) continue;
+        visited.add(item.r + ',' + item.c);
+        removeWall(item.fromR, item.fromC, item.r, item.c);
+        steps.push({ r: item.r, c: item.c });
+
+        for (let d = 0; d < 4; d++) {
+          const nr = item.r + DY[d], nc = item.c + DX[d];
+          if (inBounds(nr, nc) && !visited.has(nr + ',' + nc)) {
+            frontier.push({ r: nr, c: nc, fromR: item.r, fromC: item.c });
+          }
+        }
+      }
+      return steps;
+    }
+
+    function genKruskal() {
+      const steps = [];
+      // Union-Find
+      const parent = new Array(cols * rows);
+      const rank = new Array(cols * rows).fill(0);
+      for (let i = 0; i < cols * rows; i++) parent[i] = i;
+      function find(x) { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
+      function union(a, b) {
+        a = find(a); b = find(b);
+        if (a === b) return false;
+        if (rank[a] < rank[b]) [a, b] = [b, a];
+        parent[b] = a;
+        if (rank[a] === rank[b]) rank[a]++;
+        return true;
+      }
+
+      // Create all edges
+      const edges = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (c < cols - 1) edges.push({ r1: r, c1: c, r2: r, c2: c + 1 });
+          if (r < rows - 1) edges.push({ r1: r, c1: c, r2: r + 1, c2: c });
+        }
+      }
+      shuffle(edges);
+
+      for (const e of edges) {
+        const id1 = e.r1 * cols + e.c1;
+        const id2 = e.r2 * cols + e.c2;
+        if (union(id1, id2)) {
+          removeWall(e.r1, e.c1, e.r2, e.c2);
+          steps.push({ r: e.r1, c: e.c1 });
+          steps.push({ r: e.r2, c: e.c2 });
+        }
+      }
+      return steps;
+    }
+
+    function genDivision() {
+      const steps = [];
+      // Start with all walls
+      function divide(x, y, w, h) {
+        if (w < 2 || h < 2) return;
+        const horizontal = h > w ? true : w > h ? false : Math.random() < 0.5;
+
+        if (horizontal) {
+          const wy = y + 2 + Math.floor(Math.random() * ((h - 2) / 2)) * 2;
+          const px = x + Math.floor(Math.random() * w);
+          for (let cx = x; cx < x + w; cx++) {
+            if (cx === px) continue;
+            if (inBounds(wy - 1, cx) && inBounds(wy, cx)) {
+              removeWall(wy - 1, cx, wy, cx);
+              steps.push({ r: wy - 1, c: cx });
+              steps.push({ r: wy, c: cx });
+            }
+          }
+          divide(x, y, w, wy - y);
+          divide(x, wy + 1, w, y + h - wy - 1);
+        } else {
+          const wx = x + 2 + Math.floor(Math.random() * ((w - 2) / 2)) * 2;
+          const py = y + Math.floor(Math.random() * h);
+          for (let cy = y; cy < y + h; cy++) {
+            if (cy === py) continue;
+            if (inBounds(cy, wx - 1) && inBounds(cy, wx)) {
+              removeWall(cy, wx - 1, cy, wx);
+              steps.push({ r: cy, c: wx - 1 });
+              steps.push({ r: cy, c: wx });
+            }
+          }
+          divide(x, y, wx - x, h);
+          divide(wx + 1, y, x + w - wx - 1, h);
+        }
+      }
+      // For recursive division, start with no walls, then add walls
+      // Actually: start fresh (all walls up), then the algorithm carves passages
+      // We need a different approach: start with all walls removed, then add dividing walls
+      // Let's use the standard approach: start with full grid, add walls between cells
+
+      // Reset all walls
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+          grid[r][c].walls = [false, false, false, false];
+
+      // Now add walls back along even boundaries
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          // Add all walls
+          grid[r][c].walls = [true, true, true, true];
+          steps.push({ r, c });
+        }
+      }
+
+      // Carve passages from the cells (remove all internal walls first, then division adds walls back)
+      // This is complex — let me use a simpler approach
+      // Actually let's use the "add walls, then remove passages" approach
+
+      // Reset: all walls present
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+          grid[r][c].walls = [true, true, true, true];
+
+      // The recursive division algorithm works differently:
+      // Start with an open grid, recursively add walls
+      // Let me implement it properly
+
+      // First: clear all walls (open grid)
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          grid[r][c].walls = [false, false, false, false];
+        }
+      }
+
+      // Build walls with division
+      function addWalls(x, y, w, h) {
+        if (w < 3 || h < 3) return; // Too small to divide
+
+        const horizontal = h > w ? true : w > h ? false : Math.random() < 0.5;
+
+        if (horizontal) {
+          // Add a horizontal wall at even row
+          const wy = y + 2 + 2 * Math.floor(Math.random() * Math.floor((h - 2) / 2));
+          if (wy >= y + h - 1) return;
+          const passage = x + Math.floor(Math.random() * w);
+          for (let cx = x; cx < x + w; cx++) {
+            if (cx === passage) continue;
+            // Wall between (wy-1, cx) and (wy, cx)
+            if (inBounds(wy - 1, cx) && inBounds(wy, cx)) {
+              grid[wy - 1][cx].walls[2] = true; // bottom
+              grid[wy][cx].walls[0] = true;      // top
+              steps.push({ r: wy - 1, c: cx });
+            }
+          }
+          addWalls(x, y, w, wy - y);
+          addWalls(x, wy + 1, w, y + h - wy - 1);
+        } else {
+          const wx = x + 2 + 2 * Math.floor(Math.random() * Math.floor((w - 2) / 2));
+          if (wx >= x + w - 1) return;
+          const passage = y + Math.floor(Math.random() * h);
+          for (let cy = y; cy < y + h; cy++) {
+            if (cy === passage) continue;
+            if (inBounds(cy, wx - 1) && inBounds(cy, wx)) {
+              grid[cy][wx - 1].walls[1] = true; // right
+              grid[cy][wx].walls[3] = true;      // left
+              steps.push({ r: cy, c: wx - 1 });
+            }
+          }
+          addWalls(x, y, wx - x, h);
+          addWalls(wx + 1, y, x + w - wx - 1, h);
+        }
+      }
+
+      addWalls(0, 0, cols, rows);
+      // Ensure start/end are reachable
+      grid[startPos.r][startPos.c].walls[0] = false;
+      grid[endPos.r][endPos.c].walls[2] = false;
+      return steps;
+    }
+
+    function genEller() {
+      const steps = [];
+      let setId = 0;
+      const rowSets = new Array(cols).fill(0);
+
+      // Initialize first row
+      for (let c = 0; c < cols; c++) rowSets[c] = setId++;
+
+      for (let r = 0; r < rows; r++) {
+        // Mark cells
+        for (let c = 0; c < cols; c++) steps.push({ r, c });
+
+        // Randomly merge adjacent cells in same row with different sets
+        const candidates = [];
+        for (let c = 0; c < cols - 1; c++) {
+          if (rowSets[c] !== rowSets[c + 1]) {
+            candidates.push(c);
+          }
+        }
+        shuffle(candidates);
+        const mergesToMake = Math.floor(candidates.length * (0.3 + Math.random() * 0.4));
+        for (let i = 0; i < mergesToMake; i++) {
+          const c = candidates[i];
+          const oldSet = rowSets[c + 1];
+          const newSet = rowSets[c];
+          // Replace all occurrences of oldSet
+          for (let k = 0; k < cols; k++) {
+            if (rowSets[k] === oldSet) rowSets[k] = newSet;
+          }
+          removeWall(r, c, r, c + 1);
+        }
+
+        if (r < rows - 1) {
+          // For each set, ensure at least one cell goes down
+          const setCells = {};
+          for (let c = 0; c < cols; c++) {
+            const s = rowSets[c];
+            if (!setCells[s]) setCells[s] = [];
+            setCells[s].push(c);
+          }
+
+          const nextSets = new Array(cols).fill(-1);
+          for (const s in setCells) {
+            const cells = setCells[s];
+            shuffle(cells);
+            // At least one goes down
+            const numDown = Math.max(1, Math.floor(cells.length * (0.3 + Math.random() * 0.5)));
+            for (let i = 0; i < numDown; i++) {
+              const c = cells[i];
+              removeWall(r, c, r + 1, c);
+              nextSets[c] = parseInt(s);
+            }
+          }
+
+          // Assign new sets to cells that didn't go down
+          for (let c = 0; c < cols; c++) {
+            if (nextSets[c] === -1) {
+              nextSets[c] = setId++;
+            }
+          }
+          for (let c = 0; c < cols; c++) rowSets[c] = nextSets[c];
+        }
+      }
+      return steps;
+    }
+
+    function genAldous() {
+      const steps = [];
+      const total = rows * cols;
+      let count = 0;
+      const visited = new Set();
+      let r = 0, c = 0;
+      visited.add(r + ',' + c);
+      steps.push({ r, c });
+      count++;
+
+      while (count < total) {
+        // Random unvisited neighbor
+        const dirs = shuffle([0, 1, 2, 3]);
+        let moved = false;
+        for (const d of dirs) {
+          const nr = r + DY[d], nc = c + DX[d];
+          if (inBounds(nr, nc) && !visited.has(nr + ',' + nc)) {
+            removeWall(r, c, nr, nc);
+            r = nr; c = nc;
+            visited.add(r + ',' + c);
+            steps.push({ r, c });
+            count++;
+            moved = true;
+            break;
+          }
+        }
+        if (!moved) {
+          // Random neighbor (visited or not) to keep walking
+          const validDirs = [];
+          for (const d of dirs) {
+            const nr = r + DY[d], nc = c + DX[d];
+            if (inBounds(nr, nc)) validDirs.push({ r: nr, c: nc });
+          }
+          if (validDirs.length > 0) {
+            const next = validDirs[Math.floor(Math.random() * validDirs.length)];
+            if (!visited.has(next.r + ',' + next.c)) {
+              removeWall(r, c, next.r, next.c);
+              visited.add(next.r + ',' + next.c);
+              count++;
+            }
+            r = next.r; c = next.c;
+            steps.push({ r, c });
+          }
+        }
+      }
+      return steps;
+    }
+
+    // ── Solving algorithms ──────────────────────────────────────
+    function solveBFS() {
+      if (!startPos || !endPos) return [];
+      const dist = Array.from({ length: rows }, () => Array(cols).fill(-1));
+      const prev = Array.from({ length: rows }, () => Array(cols).fill(null));
+      const queue = [startPos];
+      dist[startPos.r][startPos.c] = 0;
+      const explored = [];
+
+      while (queue.length > 0) {
+        const cur = queue.shift();
+        explored.push(cur);
+        if (cur.r === endPos.r && cur.c === endPos.c) break;
+        for (const nb of getNeighbors(cur.r, cur.c)) {
+          if (dist[nb.r][nb.c] === -1) {
+            dist[nb.r][nb.c] = dist[cur.r][cur.c] + 1;
+            prev[nb.r][nb.c] = cur;
+            queue.push(nb);
+          }
+        }
+      }
+
+      distances = dist;
+      // Reconstruct path
+      const path = [];
+      let cur = endPos;
+      while (cur && !(cur.r === startPos.r && cur.c === startPos.c)) {
+        path.unshift(cur);
+        cur = prev[cur.r][cur.c];
+      }
+      if (cur) path.unshift(startPos);
+      return { path, explored, dist };
+    }
+
+    function solveDFS() {
+      if (!startPos || !endPos) return [];
+      const visited = new Set();
+      const prev = Array.from({ length: rows }, () => Array(cols).fill(null));
+      const stack = [startPos];
+      visited.add(startPos.r + ',' + startPos.c);
+      const explored = [];
+      const dist = Array.from({ length: rows }, () => Array(cols).fill(-1));
+      dist[startPos.r][startPos.c] = 0;
+
+      while (stack.length > 0) {
+        const cur = stack.pop();
+        explored.push(cur);
+        if (cur.r === endPos.r && cur.c === endPos.c) break;
+        const nbs = getNeighbors(cur.r, cur.c);
+        shuffle(nbs);
+        for (const nb of nbs) {
+          const key = nb.r + ',' + nb.c;
+          if (!visited.has(key)) {
+            visited.add(key);
+            prev[nb.r][nb.c] = cur;
+            dist[nb.r][nb.c] = dist[cur.r][cur.c] + 1;
+            stack.push(nb);
+          }
+        }
+      }
+
+      distances = dist;
+      const path = [];
+      let cur = endPos;
+      while (cur && !(cur.r === startPos.r && cur.c === startPos.c)) {
+        path.unshift(cur);
+        cur = prev[cur.r][cur.c];
+      }
+      if (cur) path.unshift(startPos);
+      return { path, explored, dist };
+    }
+
+    function solveAStar() {
+      if (!startPos || !endPos) return [];
+      const dist = Array.from({ length: rows }, () => Array(cols).fill(-1));
+      const prev = Array.from({ length: rows }, () => Array(cols).fill(null));
+      const gScore = Array.from({ length: rows }, () => Array(cols).fill(Infinity));
+      const heuristic = (r, c) => Math.abs(r - endPos.r) + Math.abs(c - endPos.c);
+
+      gScore[startPos.r][startPos.c] = 0;
+      const open = [{ r: startPos.r, c: startPos.c, f: heuristic(startPos.r, startPos.c) }];
+      const closed = new Set();
+      const explored = [];
+
+      while (open.length > 0) {
+        open.sort((a, b) => a.f - b.f);
+        const cur = open.shift();
+        const key = cur.r + ',' + cur.c;
+        if (closed.has(key)) continue;
+        closed.add(key);
+        explored.push(cur);
+        dist[cur.r][cur.c] = gScore[cur.r][cur.c];
+
+        if (cur.r === endPos.r && cur.c === endPos.c) break;
+
+        for (const nb of getNeighbors(cur.r, cur.c)) {
+          const nk = nb.r + ',' + nb.c;
+          if (closed.has(nk)) continue;
+          const tentG = gScore[cur.r][cur.c] + 1;
+          if (tentG < gScore[nb.r][nb.c]) {
+            prev[nb.r][nb.c] = cur;
+            gScore[nb.r][nb.c] = tentG;
+            open.push({ r: nb.r, c: nb.c, f: tentG + heuristic(nb.r, nb.c) });
+          }
+        }
+      }
+
+      distances = dist;
+      const path = [];
+      let cur = endPos;
+      while (cur && !(cur.r === startPos.r && cur.c === startPos.c)) {
+        path.unshift(cur);
+        cur = prev[cur.r][cur.c];
+      }
+      if (cur) path.unshift(startPos);
+      return { path, explored, dist };
+    }
+
+    function solveDijkstra() {
+      // Same as A* with h=0
+      if (!startPos || !endPos) return [];
+      const dist = Array.from({ length: rows }, () => Array(cols).fill(-1));
+      const prev = Array.from({ length: rows }, () => Array(cols).fill(null));
+      const gScore = Array.from({ length: rows }, () => Array(cols).fill(Infinity));
+
+      gScore[startPos.r][startPos.c] = 0;
+      const open = [{ r: startPos.r, c: startPos.c, g: 0 }];
+      const closed = new Set();
+      const explored = [];
+
+      while (open.length > 0) {
+        open.sort((a, b) => a.g - b.g);
+        const cur = open.shift();
+        const key = cur.r + ',' + cur.c;
+        if (closed.has(key)) continue;
+        closed.add(key);
+        explored.push(cur);
+        dist[cur.r][cur.c] = gScore[cur.r][cur.c];
+
+        if (cur.r === endPos.r && cur.c === endPos.c) break;
+
+        for (const nb of getNeighbors(cur.r, cur.c)) {
+          const nk = nb.r + ',' + nb.c;
+          if (closed.has(nk)) continue;
+          const tentG = gScore[cur.r][cur.c] + 1;
+          if (tentG < gScore[nb.r][nb.c]) {
+            prev[nb.r][nb.c] = cur;
+            gScore[nb.r][nb.c] = tentG;
+            open.push({ r: nb.r, c: nb.c, g: tentG });
+          }
+        }
+      }
+
+      distances = dist;
+      const path = [];
+      let cur = endPos;
+      while (cur && !(cur.r === startPos.r && cur.c === startPos.c)) {
+        path.unshift(cur);
+        cur = prev[cur.r][cur.c];
+      }
+      if (cur) path.unshift(startPos);
+      return { path, explored, dist };
+    }
+
+    // ── Animation runner ────────────────────────────────────────
+    let animSteps = [];
+    let animIdx = 0;
+    let animType = ''; // 'gen' or 'solve'
+    let animResolve = null;
+
+    function startAnimation(steps, type) {
+      return new Promise(resolve => {
+        animSteps = steps;
+        animIdx = 0;
+        animType = type;
+        animResolve = resolve;
+        animating = true;
+        if (type === 'gen') {
+          // Reset gen flags
+          for (let r = 0; r < rows; r++)
+            for (let c = 0; c < cols; c++)
+              grid[r][c].gen = false;
+        }
+        animFrame();
+      });
+    }
+
+    function animFrame() {
+      if (!animating) return;
+      const speed = getSpeed();
+      const stepsPerFrame = animType === 'gen' ? speed : Math.max(1, Math.floor(speed / 2));
+      const shouldAnimate = animType === 'gen' ? $animGen.checked : $animSolve.checked;
+
+      if (!shouldAnimate || speed >= cols * rows) {
+        // Instant: apply all
+        for (let i = animIdx; i < animSteps.length; i++) {
+          applyStep(animSteps[i]);
+        }
+        animIdx = animSteps.length;
+      } else {
+        for (let i = 0; i < stepsPerFrame && animIdx < animSteps.length; i++, animIdx++) {
+          applyStep(animSteps[animIdx]);
+        }
+      }
+
+      render();
+
+      if (animIdx >= animSteps.length) {
+        animating = false;
+        animSteps = [];
+        animIdx = 0;
+        if (animResolve) { animResolve(); animResolve = null; }
+        return;
+      }
+
+      animId = requestAnimationFrame(animFrame);
+    }
+
+    function applyStep(step) {
+      if (animType === 'gen') {
+        if (step.r !== undefined && step.c !== undefined) {
+          grid[step.r][step.c].gen = true;
+        }
+      } else if (animType === 'solve') {
+        if (step.explored) {
+          // It's the full solve result
+          const { path, explored, dist } = step;
+          // Apply explored cells one by one would be in the steps array
+        }
+      }
+    }
+
+    // ── Generate ────────────────────────────────────────────────
+    function generate() {
+      stopAnim();
+      initGrid(parseInt($mazeW.value), parseInt($mazeH.value));
+      $wVal.textContent = cols;
+      $hVal.textContent = rows;
+
+      let steps;
+      switch ($genAlgo.value) {
+        case 'backtracker': steps = genBacktracker(); break;
+        case 'prim': steps = genPrim(); break;
+        case 'kruskal': steps = genKruskal(); break;
+        case 'division': steps = genDivision(); break;
+        case 'eller': steps = genEller(); break;
+        case 'aldous': steps = genAldous(); break;
+        default: steps = genBacktracker();
+      }
+
+      updateStats();
+      startAnimation(steps, 'gen');
+    }
+
+    // ── Solve ───────────────────────────────────────────────────
+    function solve() {
+      if (!startPos || !endPos) return;
+      stopAnim();
+      solution = [];
+      distances = Array.from({ length: rows }, () => Array(cols).fill(-1));
+
+      // Reset visited/gen
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++) {
+          grid[r][c].gen = false;
+          grid[r][c].dist = -1;
+        }
+
+      let result;
+      switch ($solveAlgo.value) {
+        case 'bfs': result = solveBFS(); break;
+        case 'dfs': result = solveDFS(); break;
+        case 'astar': result = solveAStar(); break;
+        case 'dijkstra': result = solveDijkstra(); break;
+        default: result = solveBFS();
+      }
+
+      if (!result || !result.path) { render(); return; }
+
+      const { path, explored, dist } = result;
+      distances = dist;
+
+      // Animate exploration
+      const steps = explored.map((cell, i) => ({ ...cell, dist: dist[cell.r][cell.c] }));
+
+      let idx = 0;
+      const speed = getSpeed();
+      const shouldAnimate = $animSolve.checked;
+      const stepsPerFrame = Math.max(1, Math.floor(speed / 2));
+
+      function animSolveFrame() {
+        if (!shouldAnimate || speed >= cols * rows) {
+          // Instant
+          for (let i = 0; i < steps.length; i++) {
+            grid[steps[i].r][steps[i].c].gen = true;
+          }
+          solution = path;
+          render();
+          return;
+        }
+
+        for (let i = 0; i < stepsPerFrame && idx < steps.length; i++, idx++) {
+          grid[steps[idx].r][steps[idx].c].gen = true;
+        }
+        render();
+
+        if (idx >= steps.length) {
+          solution = path;
+          render();
+          return;
+        }
+        animId = requestAnimationFrame(animSolveFrame);
+      }
+
+      animating = true;
+      animSolveFrame();
+    }
+
+    function stopAnim() {
+      if (animId) { cancelAnimationFrame(animId); animId = null; }
+      animating = false;
+    }
+
+    // ── Clear / Reset ───────────────────────────────────────────
+    function clearWalls() {
+      stopAnim();
+      solution = [];
+      distances = [];
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++) {
+          grid[r][c].walls = [true, true, true, true];
+          grid[r][c].gen = false;
+        }
+      updateStats();
+      render();
+    }
+
+    function resetAll() {
+      stopAnim();
+      solution = [];
+      distances = [];
+      initGrid(parseInt($mazeW.value), parseInt($mazeH.value));
+    }
+
+    // ── Canvas interaction ──────────────────────────────────────
+    function getCellFromEvent(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const cx = Math.floor(x * scaleX / cellSize);
+      const cy = Math.floor(y * scaleY / cellSize);
+      if (cx >= 0 && cx < cols && cy >= 0 && cy < rows) {
+        return { r: cy, c: cx };
+      }
+      return null;
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isMouseDown = true;
+      handleCanvasClick(e);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isMouseDown) return;
+      const cell = getCellFromEvent(e);
+      if (!cell) return;
+      if (interactionMode === 'wall' || interactionMode === 'erase') {
+        const val = interactionMode === 'wall';
+        grid[cell.r][cell.c].walls = [val, val, val, val];
+        // Also remove/add neighbor walls for consistency
+        for (let d = 0; d < 4; d++) {
+          const nr = cell.r + DY[d], nc = cell.c + DX[d];
+          if (inBounds(nr, nc)) {
+            grid[nr][nc].walls[OPP[d]] = val;
+          }
+        }
+        updateStats();
+        render();
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => { isMouseDown = false; });
+    canvas.addEventListener('mouseleave', () => { isMouseDown = false; });
+
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    function handleCanvasClick(e) {
+      const cell = getCellFromEvent(e);
+      if (!cell) return;
+
+      if (interactionMode === 'start') {
+        startPos = cell;
+        render();
+      } else if (interactionMode === 'end') {
+        endPos = cell;
+        render();
+      } else if (interactionMode === 'wall') {
+        grid[cell.r][cell.c].walls = [true, true, true, true];
+        for (let d = 0; d < 4; d++) {
+          const nr = cell.r + DY[d], nc = cell.c + DX[d];
+          if (inBounds(nr, nc)) grid[nr][nc].walls[OPP[d]] = true;
+        }
+        updateStats();
+        render();
+      } else if (interactionMode === 'erase') {
+        grid[cell.r][cell.c].walls = [false, false, false, false];
+        for (let d = 0; d < 4; d++) {
+          const nr = cell.r + DY[d], nc = cell.c + DX[d];
+          if (inBounds(nr, nc)) grid[nr][nc].walls[OPP[d]] = false;
+        }
+        updateStats();
+        render();
+      }
+    }
+
+    // ── Randomize ───────────────────────────────────────────────
+    function randomize() {
+      const algos = ['backtracker', 'prim', 'kruskal', 'division', 'eller', 'aldous'];
+      $genAlgo.value = algos[Math.floor(Math.random() * algos.length)];
+      const pw = [15, 20, 25, 30, 35, 40, 50];
+      const ph = [10, 15, 20, 25, 30, 40];
+      $mazeW.value = pw[Math.floor(Math.random() * pw.length)];
+      $mazeH.value = ph[Math.floor(Math.random() * ph.length)];
+      $wVal.textContent = $mazeW.value;
+      $hVal.textContent = $mazeH.value;
+      generate();
+    }
+    window.shortcuts_random = randomize;
+
+    // ── Event listeners ─────────────────────────────────────────
+    document.getElementById('btn-generate').addEventListener('click', generate);
+    document.getElementById('btn-solve').addEventListener('click', solve);
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      stopAnim();
+      solution = [];
+      distances = [];
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++) {
+          grid[r][c].gen = false;
+        }
+      render();
+    });
+    document.getElementById('btn-reset').addEventListener('click', resetAll);
+
+    document.getElementById('btn-snapshot').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = 'maze.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+
+    $mazeW.addEventListener('input', () => { $wVal.textContent = $mazeW.value; });
+    $mazeH.addEventListener('input', () => { $hVal.textContent = $mazeH.value; });
+    $wallThick.addEventListener('input', () => {
+      $wtVal.textContent = $wallThick.value;
+      render();
+    });
+    $palette.addEventListener('change', render);
+    $showGrid.addEventListener('change', render);
+    $showDist.addEventListener('change', render);
+
+    // Mode buttons
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        interactionMode = btn.dataset.mode;
+      });
+    });
+
+    // Preset buttons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        $mazeW.value = btn.dataset.w;
+        $mazeH.value = btn.dataset.h;
+        $wVal.textContent = btn.dataset.w;
+        $hVal.textContent = btn.dataset.h;
+        generate();
+      });
+    });
+
+    // ── Share ───────────────────────────────────────────────────
+    window.getShareParams = function () {
+      return {
+        genAlgo: $genAlgo.value,
+        solveAlgo: $solveAlgo.value,
+        w: parseInt($mazeW.value),
+        h: parseInt($mazeH.value),
+        speed: parseInt($genSpeed.value),
+        palette: $palette.value,
+        wt: parseInt($wallThick.value),
+        showGrid: $showGrid.checked,
+        showDist: $showDist.checked,
+        animGen: $animGen.checked,
+        animSolve: $animSolve.checked,
+        start: startPos ? [startPos.r, startPos.c] : null,
+        end: endPos ? [endPos.r, endPos.c] : null,
+      };
+    };
+
+    window.applyShareParams = function (p) {
+      if (p.genAlgo) $genAlgo.value = p.genAlgo;
+      if (p.solveAlgo) $solveAlgo.value = p.solveAlgo;
+      if (p.w) { $mazeW.value = p.w; $wVal.textContent = p.w; }
+      if (p.h) { $mazeH.value = p.h; $hVal.textContent = p.h; }
+      if (p.speed) $genSpeed.value = p.speed;
+      if (p.palette) $palette.value = p.palette;
+      if (p.wt) { $wallThick.value = p.wt; $wtVal.textContent = p.wt; }
+      if (p.showGrid !== undefined) $showGrid.checked = p.showGrid;
+      if (p.showDist !== undefined) $showDist.checked = p.showDist;
+      if (p.animGen !== undefined) $animGen.checked = p.animGen;
+      if (p.animSolve !== undefined) $animSolve.checked = p.animSolve;
+      generate();
+      if (p.start) { startPos = { r: p.start[0], c: p.start[1] }; }
+      if (p.end) { endPos = { r: p.end[0], c: p.end[1] }; }
+      render();
+    };
+
+    // ── Keyboard shortcuts toggle ───────────────────────────────
+    window.shortcuts_toggle = function () {
+      if (animating) stopAnim();
+    };
+
+    // ── Init ────────────────────────────────────────────────────
+    initGrid(30, 20);
+  })();
+  </script>
+</body>
+</html>

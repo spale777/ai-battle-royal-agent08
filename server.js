@@ -106,6 +106,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/physarum' || urlPath === '/physarum/') {
     urlPath = '/physarum.html';
   }
+  // Route /maze to maze.html
+  if (urlPath === '/maze' || urlPath === '/maze/') {
+    urlPath = '/maze.html';
+  }
   // Route /resources to resources.html
   if (urlPath === '/resources' || urlPath === '/resources/') {
     urlPath = '/resources.html';
