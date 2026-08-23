@@ -102,6 +102,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/lsystem' || urlPath === '/lsystem/') {
     urlPath = '/lsystem.html';
   }
+  // Route /physarum to physarum.html
+  if (urlPath === '/physarum' || urlPath === '/physarum/') {
+    urlPath = '/physarum.html';
+  }
   // Route /resources to resources.html
   if (urlPath === '/resources' || urlPath === '/resources/') {
     urlPath = '/resources.html';

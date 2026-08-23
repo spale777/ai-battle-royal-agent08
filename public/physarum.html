@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Physarum — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Physarum slime mold simulation — watch virtual organisms create organic networks through emergent behavior.">
+  <meta property="og:title" content="Physarum — agent-08 Digital Art Lab">
+  <meta property="og:description" content="Physarum slime mold simulation — watch virtual organisms create organic networks through emergent behavior.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://agent-08.sklopocija.com/physarum">
+  <meta property="og:image" content="https://agent-08.sklopocija.com/images/hero.png">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪸</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a0f; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+
+    .lab-layout {
+      display: flex; height: 100vh; padding-top: 56px;
+    }
+    .lab-canvas-wrap {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0a0f;
+    }
+    .lab-canvas-wrap canvas { display: block; max-width: 100%; max-height: 100%; }
+
+    .lab-sidebar {
+      width: 280px; min-width: 280px;
+      background: #0f0f18;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto; padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 0.8rem;
+    }
+    .lab-sidebar h2 {
+      font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;
+      color: #7eb8ff; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .lab-sidebar h3 {
+      font-size: 0.85rem; font-weight: 600; color: #aaa;
+      margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    .control-group { margin-bottom: 0.4rem; }
+    .control-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;
+    }
+    .control-label .val { color: #7eb8ff; font-weight: 600; font-size: 0.75rem; }
+
+    input[type="range"] {
+      width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+      background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer;
+      box-shadow: 0 0 8px rgba(126,184,255,0.4);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer; border: none;
+    }
+
+    .preset-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+    }
+    .preset-btn {
+      padding: 0.4rem 0.5rem; font-size: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #bbb; border-radius: 6px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .preset-btn:hover {
+      background: rgba(126,184,255,0.1);
+      border-color: rgba(126,184,255,0.3);
+      color: #7eb8ff;
+    }
+    .preset-btn.active {
+      background: rgba(126,184,255,0.2);
+      border-color: #7eb8ff; color: #7eb8ff;
+    }
+
+    .btn {
+      padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4a7fff, #7e57c2);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(74, 127, 255, 0.3);
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: #aaa; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      color: #e0e0e8;
+    }
+    .btn-row { display: flex; gap: 0.5rem; }
+    .btn-row .btn { flex: 1; }
+
+    .mode-btn {
+      padding: 0.35rem 0.6rem; font-size: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #bbb; border-radius: 6px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .mode-btn:hover { background: rgba(126,184,255,0.1); color: #7eb8ff; }
+    .mode-btn.active { background: rgba(126,184,255,0.2); border-color: #7eb8ff; color: #7eb8ff; }
+
+    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 0.5rem 0; }
+
+    .stats-bar {
+      font-size: 0.75rem; color: #555; text-align: center;
+      padding: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06);
+      margin-top: auto;
+    }
+
+    .hint-overlay {
+      position: absolute; bottom: 16px; left: 16px;
+      font-size: 0.75rem; color: rgba(255,255,255,0.35);
+      background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 4px;
+      pointer-events: none; z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous">Lissajous</a>
+        <a href="/spirograph">Spirograph</a>
+        <a href="/particle-life">Life</a>
+        <a href="/noise">Noise</a>
+        <a href="/cellular">Automata</a>
+        <a href="/voronoi">Voronoi</a>
+        <a href="/metaballs">Metaballs</a>
+        <a href="/attract">Attractors</a>
+        <a href="/wave">Waves</a>
+        <a href="/lsystem">L-Systems</a>
+        <a href="/physarum" class="active">Physarum</a>
+        <a href="/resources">Resources</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="lab-layout">
+    <div class="lab-canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div class="hint-overlay">Watch virtual slime mold organisms create organic networks</div>
+    </div>
+    <div class="lab-sidebar">
+      <h2>🪸 Physarum</h2>
+
+      <h3>Presets</h3>
+      <div class="preset-grid" id="presets">
+        <button class="preset-btn active" data-preset="classic">Classic</button>
+        <button class="preset-btn" data-preset="dense">Dense</button>
+        <button class="preset-btn" data-preset="sparse">Sparse</button>
+        <button class="preset-btn" data-preset="veins">Veins</button>
+        <button class="preset-btn" data-preset="coral">Coral</button>
+        <button class="preset-btn" data-preset="brain">Brain</button>
+        <button class="preset-btn" data-preset="galaxy">Galaxy</button>
+        <button class="preset-btn" data-preset="circuit">Circuit</button>
+      </div>
+
+      <hr class="divider">
+
+      <h3>Display</h3>
+      <div class="btn-row">
+        <button class="mode-btn active" id="mode-palette">Palette</button>
+        <button class="mode-btn" id="mode-mono">Mono</button>
+        <button class="mode-btn" id="mode-species">Species</button>
+      </div>
+
+      <h3>Palette</h3>
+      <div class="preset-grid" id="palettes">
+        <button class="mode-btn active" data-pal="biolum">Biolum</button>
+        <button class="mode-btn" data-pal="lava">Lava</button>
+        <button class="mode-btn" data-pal="ocean">Ocean</button>
+        <button class="mode-btn" data-pal="forest">Forest</button>
+        <button class="mode-btn" data-pal="neon">Neon</button>
+        <button class="mode-btn" data-pal="pastel">Pastel</button>
+        <button class="mode-btn" data-pal="thermal">Thermal</button>
+        <button class="mode-btn" data-pal="grayscale">Gray</button>
+      </div>
+
+      <hr class="divider">
+
+      <h3>Simulation</h3>
+      <div class="control-group">
+        <div class="control-label"><span>Agents</span><span class="val" id="v-agents">40000</span></div>
+        <input type="range" id="agents" min="5000" max="120000" step="1000" value="40000">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Species</span><span class="val" id="v-species">1</span></div>
+        <input type="range" id="species" min="1" max="4" step="1" value="1">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Sensor Angle</span><span class="val" id="v-sensorAngle">22.5°</span></div>
+        <input type="range" id="sensorAngle" min="5" max="90" step="1" value="22.5">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Sensor Dist</span><span class="val" id="v-sensorDist">9</span></div>
+        <input type="range" id="sensorDist" min="2" max="30" step="1" value="9">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Turn Angle</span><span class="val" id="v-turnAngle">22.5°</span></div>
+        <input type="range" id="turnAngle" min="5" max="90" step="1" value="22.5">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Speed</span><span class="val" id="v-speed">4</span></div>
+        <input type="range" id="speed" min="1" max="10" step="0.5" value="4">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Deposit</span><span class="val" id="v-deposit">5</span></div>
+        <input type="range" id="deposit" min="1" max="20" step="0.5" value="5">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Decay</span><span class="val" id="v-decay">0.95</span></div>
+        <input type="range" id="decay" min="0.80" max="0.999" step="0.005" value="0.95">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Render Scale</span><span class="val" id="v-scale">2</span></div>
+        <input type="range" id="renderScale" min="1" max="4" step="1" value="2">
+      </div>
+
+      <hr class="divider">
+
+      <h3>Actions</h3>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-reset">⟳ Reset</button>
+        <button class="btn btn-secondary" id="btn-snapshot">📷 Save</button>
+      </div>
+      <div class="btn-row" style="margin-top:0.5rem">
+        <button class="btn btn-secondary" id="btn-share">🔗 Copy Link</button>
+      </div>
+
+      <div class="stats-bar" id="stats">Agents: 0 · Substrate: 0</div>
+    </div>
+  </div>
+
+  <script src="/shortcuts.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    // ── Config ──────────────────────────────────────────────
+    const PRESETS = {
+      classic:  { agents: 40000, species: 1, sensorAngle: 22.5, sensorDist: 9,  turnAngle: 22.5, speed: 4, deposit: 5,  decay: 0.95, renderScale: 2 },
+      dense:    { agents: 80000, species: 1, sensorAngle: 20,   sensorDist: 8,  turnAngle: 20,   speed: 3, deposit: 4,  decay: 0.96, renderScale: 2 },
+      sparse:   { agents: 15000, species: 1, sensorAngle: 30,   sensorDist: 12, turnAngle: 30,   speed: 5, deposit: 6,  decay: 0.93, renderScale: 2 },
+      veins:    { agents: 50000, species: 1, sensorAngle: 15,   sensorDist: 6,  turnAngle: 15,   speed: 3, deposit: 8,  decay: 0.97, renderScale: 2 },
+      coral:    { agents: 60000, species: 2, sensorAngle: 25,   sensorDist: 7,  turnAngle: 25,   speed: 3, deposit: 5,  decay: 0.96, renderScale: 2 },
+      brain:    { agents: 50000, species: 1, sensorAngle: 40,   sensorDist: 10, turnAngle: 35,   speed: 3, deposit: 6,  decay: 0.955,renderScale: 2 },
+      galaxy:   { agents: 70000, species: 2, sensorAngle: 18,   sensorDist: 8,  turnAngle: 18,   speed: 4, deposit: 4,  decay: 0.94, renderScale: 2 },
+      circuit:  { agents: 45000, species: 1, sensorAngle: 10,   sensorDist: 14, turnAngle: 90,   speed: 5, deposit: 6,  decay: 0.95, renderScale: 2 },
+    };
+
+    const PALETTES = {
+      biolum:   [[0,5,20],[0,40,80],[0,180,160],[100,255,200],[220,255,240]],
+      lava:     [[10,0,0],[80,0,0],[200,20,0],[255,120,0],[255,240,60]],
+      ocean:    [[0,5,30],[0,20,80],[0,80,160],[40,160,220],[180,230,255]],
+      forest:   [[5,10,0],[10,60,10],[30,120,20],[80,200,60],[200,255,100]],
+      neon:     [[20,0,40],[100,0,200],[200,0,255],[255,0,180],[255,100,255]],
+      pastel:   [[30,20,50],[120,80,160],[180,140,200],[220,180,220],[255,230,255]],
+      thermal:  [[0,0,30],[0,80,160],[20,200,80],[255,220,0],[255,60,0]],
+      grayscale:[[0,0,0],[40,40,40],[100,100,100],[180,180,180],[255,255,255]],
+    };
+
+    // Species color offsets (hue shifts for multi-species)
+    const SPECIES_HUES = [0, 120, 240, 60];
+
+    let W, H;           // canvas size
+    let gW, gH;         // grid size (W/renderScale, H/renderScale)
+    let renderScale;
+    let substrate, agents;
+    let animId;
+    let paused = false;
+    let stepCount = 0;
+
+    // Current params
+    let params = { ...PRESETS.classic };
+    let displayMode = 'palette'; // palette | mono | species
+    let paletteName = 'biolum';
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // ── Palette interpolation ───────────────────────────────
+    function samplePalette(t, palName) {
+      const pal = PALETTES[palName || paletteName];
+      t = Math.max(0, Math.min(1, t));
+      const idx = t * (pal.length - 1);
+      const lo = Math.floor(idx);
+      const hi = Math.min(lo + 1, pal.length - 1);
+      const f = idx - lo;
+      return [
+        pal[lo][0] + (pal[hi][0] - pal[lo][0]) * f,
+        pal[lo][1] + (pal[hi][1] - pal[lo][1]) * f,
+        pal[lo][2] + (pal[hi][2] - pal[lo][2]) * f,
+      ];
+    }
+
+    // ── Init substrate & agents ─────────────────────────────
+    function init() {
+      renderScale = parseInt(document.getElementById('renderScale').value);
+      gW = Math.ceil(W / renderScale);
+      gH = Math.ceil(H / renderScale);
+      substrate = new Float32Array(gW * gH);
+      stepCount = 0;
+
+      agents = [];
+      const numSpecies = params.species;
+      const perSpecies = Math.floor(params.agents / numSpecies);
+
+      for (let s = 0; s < numSpecies; s++) {
+        for (let i = 0; i < perSpecies; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const x = Math.random() * gW;
+          const y = Math.random() * gH;
+          agents.push({
+            x, y, angle, species: s,
+            // Slight per-agent variation for organic feel
+            sensorAngleVar: (Math.random() - 0.5) * 0.1,
+            turnAngleVar: (Math.random() - 0.5) * 0.1,
+            speedVar: 0.8 + Math.random() * 0.4,
+          });
+        }
+      }
+
+      // Seed some substrate in the center to get things started
+      const cx = gW / 2, cy = gH / 2;
+      const r = Math.min(gW, gH) * 0.15;
+      for (let y = 0; y < gH; y++) {
+        for (let x = 0; x < gW; x++) {
+          const dx = x - cx, dy = y - cy;
+          if (dx * dx + dy * dy < r * r) {
+            substrate[y * gW + x] = 2 + Math.random() * 3;
+          }
+        }
+      }
+
+      updateStats();
+    }
+
+    // ── Simulation step ─────────────────────────────────────
+    function simulate() {
+      const sa = params.sensorAngle * Math.PI / 180;
+      const ta = params.turnAngle * Math.PI / 180;
+      const sd = params.sensorDist;
+      const sp = params.speed;
+      const dep = params.deposit;
+      const dec = params.decay;
+      const n = agents.length;
+      const w = gW, h = gH;
+
+      for (let i = 0; i < n; i++) {
+        const a = agents[i];
+        const sx = Math.round(a.x);
+        const sy = Math.round(a.y);
+
+        // Read sensors
+        const fwdAngle = a.angle;
+        const leftAngle = a.angle + sa;
+        const rightAngle = a.angle - sa;
+
+        const fwdX = Math.round(a.x + Math.cos(fwdAngle) * sd);
+        const fwdY = Math.round(a.y + Math.sin(fwdAngle) * sd);
+        const leftX = Math.round(a.x + Math.cos(leftAngle) * sd);
+        const leftY = Math.round(a.y + Math.sin(leftAngle) * sd);
+        const rightX = Math.round(a.x + Math.cos(rightAngle) * sd);
+        const rightY = Math.round(a.y + Math.sin(rightAngle) * sd);
+
+        const fwdV = getSubstrate(fwdX, fwdY);
+        const leftV = getSubstrate(leftX, leftY);
+        const rightV = getSubstrate(rightX, rightY);
+
+        // Decision making
+        const sAngle = sa + a.sensorAngleVar;
+        const tAngle = ta + a.turnAngleVar;
+        const spd = sp * a.speedVar;
+
+        if (fwdV > leftV && fwdV > rightV) {
+          // Go straight — nothing to do
+        } else if (fwdV < leftV && fwdV < rightV) {
+          // Turn randomly
+          if (Math.random() < 0.5) {
+            a.angle += tAngle;
+          } else {
+            a.angle -= tAngle;
+          }
+        } else if (leftV > rightV) {
+          a.angle += tAngle;
+        } else if (rightV > leftV) {
+          a.angle -= tAngle;
+        }
+
+        // Move
+        const nx = a.x + Math.cos(a.angle) * spd;
+        const ny = a.y + Math.sin(a.angle) * spd;
+
+        // Wrap around (toroidal)
+        const wx = ((nx % w) + w) % w;
+        const wy = ((ny % h) + h) % h;
+
+        // Check if new position has substrate (for trail following feel)
+        const nv = getSubstrate(Math.round(wx), Math.round(wy));
+        if (nv > 0.01) {
+          a.x = wx;
+          a.y = wy;
+        } else {
+          // Random perturbation when hitting empty space
+          a.angle += (Math.random() - 0.5) * Math.PI * 0.5;
+          const tx = a.x + Math.cos(a.angle) * spd;
+          const ty = a.y + Math.sin(a.angle) * spd;
+          a.x = ((tx % w) + w) % w;
+          a.y = ((ty % h) + h) % h;
+        }
+
+        // Deposit
+        const gi = Math.round(a.x);
+        const gj = Math.round(a.y);
+        if (gi >= 0 && gi < w && gj >= 0 && gj < h) {
+          substrate[gj * w + gi] = Math.min(substrate[gj * w + gi] + dep, 255);
+        }
+      }
+
+      // Decay substrate
+      for (let i = 0; i < substrate.length; i++) {
+        substrate[i] *= dec;
+      }
+
+      stepCount++;
+    }
+
+    function getSubstrate(x, y) {
+      if (x < 0 || x >= gW || y < 0 || y >= gH) return 0;
+      return substrate[y * gW + x];
+    }
+
+    // ── Render ──────────────────────────────────────────────
+    function render() {
+      const imgData = ctx.createImageData(gW, gH);
+      const data = imgData.data;
+      const numSpecies = params.species;
+
+      // Find max substrate for normalization
+      let maxSub = 0;
+      for (let i = 0; i < substrate.length; i++) {
+        if (substrate[i] > maxSub) maxSub = substrate[i];
+      }
+      if (maxSub < 0.01) maxSub = 1;
+
+      // For species mode, we need per-species agent positions
+      let speciesGrids = null;
+      if (displayMode === 'species' && numSpecies > 1) {
+        speciesGrids = [];
+        for (let s = 0; s < numSpecies; s++) {
+          speciesGrids.push(new Float32Array(gW * gH));
+        }
+        for (const a of agents) {
+          const gx = Math.round(a.x);
+          const gy = Math.round(a.y);
+          if (gx >= 0 && gx < gW && gy >= 0 && gy < gH) {
+            speciesGrids[a.species][gy * gW + gx] += 1;
+          }
+        }
+      }
+
+      for (let y = 0; y < gH; y++) {
+        for (let x = 0; x < gW; x++) {
+          const idx = y * gW + x;
+          const pi = idx * 4;
+          const v = substrate[idx] / maxSub;
+
+          if (displayMode === 'mono') {
+            const c = v * 255;
+            data[pi] = c * 0.9;
+            data[pi+1] = c * 0.95;
+            data[pi+2] = c;
+            data[pi+3] = 255;
+          } else if (displayMode === 'species' && speciesGrids) {
+            // Blend species colors
+            let r = 0, g = 0, b = 0;
+            for (let s = 0; s < numSpecies; s++) {
+              const sv = Math.min(speciesGrids[s][idx] / 3, 1);
+              const hue = (SPECIES_HUES[s] + 200) % 360;
+              const rgb = hslToRgb(hue / 360, 0.8, Math.min(0.3 + v * 0.5, 0.8));
+              r += rgb[0] * sv;
+              g += rgb[1] * sv;
+              b += rgb[2] * sv;
+            }
+            // Add substrate trail
+            const pal = samplePalette(v, paletteName);
+            const mix = v * 0.5;
+            data[pi]   = Math.min(255, r + pal[0] * mix);
+            data[pi+1] = Math.min(255, g + pal[1] * mix);
+            data[pi+2] = Math.min(255, b + pal[2] * mix);
+            data[pi+3] = 255;
+          } else {
+            // Palette mode
+            // For multi-species, shift palette based on species density
+            if (numSpecies > 1 && speciesGrids) {
+              let totalDensity = 0;
+              let dominantSpecies = 0;
+              let maxDensity = 0;
+              for (let s = 0; s < numSpecies; s++) {
+                totalDensity += speciesGrids[s][idx];
+                if (speciesGrids[s][idx] > maxDensity) {
+                  maxDensity = speciesGrids[s][idx];
+                  dominantSpecies = s;
+                }
+              }
+              if (totalDensity > 0.1) {
+                // Shift palette by species
+                const shift = dominantSpecies / numSpecies;
+                const pal = samplePalette((v + shift * 0.3) % 1, paletteName);
+                const intensity = Math.min(0.4 + v * 0.6, 1);
+                data[pi]   = pal[0] * intensity;
+                data[pi+1] = pal[1] * intensity;
+                data[pi+2] = pal[2] * intensity;
+                data[pi+3] = 255;
+              } else {
+                const pal = samplePalette(v, paletteName);
+                data[pi]   = pal[0];
+                data[pi+1] = pal[1];
+                data[pi+2] = pal[2];
+                data[pi+3] = 255;
+              }
+            } else {
+              const pal = samplePalette(v, paletteName);
+              data[pi]   = pal[0];
+              data[pi+1] = pal[1];
+              data[pi+2] = pal[2];
+              data[pi+3] = 255;
+            }
+          }
+        }
+      }
+
+      // Scale up to canvas
+      const tmpCanvas = document.createElement('canvas');
+      tmpCanvas.width = gW;
+      tmpCanvas.height = gH;
+      const tmpCtx = tmpCanvas.getContext('2d');
+      tmpCtx.putImageData(imgData, 0, 0);
+
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(tmpCanvas, 0, 0, W, H);
+    }
+
+    function hslToRgb(h, s, l) {
+      let r, g, b;
+      if (s === 0) { r = g = b = l; }
+      else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1/6) return p + (q - p) * 6 * t;
+          if (t < 1/2) return q;
+          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+    }
+
+    // ── Animation loop ──────────────────────────────────────
+    function loop() {
+      if (!paused) {
+        // Run multiple simulation steps per frame for speed
+        for (let i = 0; i < 3; i++) {
+          simulate();
+        }
+        render();
+      }
+      animId = requestAnimationFrame(loop);
+    }
+
+    // ── Resize ──────────────────────────────────────────────
+    function resize() {
+      const wrap = canvas.parentElement;
+      W = wrap.clientWidth;
+      H = wrap.clientHeight;
+      canvas.width = W;
+      canvas.height = H;
+      init();
+    }
+
+    // ── UI sync ─────────────────────────────────────────────
+    function syncUI() {
+      document.getElementById('agents').value = params.agents;
+      document.getElementById('v-agents').textContent = params.agents;
+      document.getElementById('species').value = params.species;
+      document.getElementById('v-species').textContent = params.species;
+      document.getElementById('sensorAngle').value = params.sensorAngle;
+      document.getElementById('v-sensorAngle').textContent = params.sensorAngle + '°';
+      document.getElementById('sensorDist').value = params.sensorDist;
+      document.getElementById('v-sensorDist').textContent = params.sensorDist;
+      document.getElementById('turnAngle').value = params.turnAngle;
+      document.getElementById('v-turnAngle').textContent = params.turnAngle + '°';
+      document.getElementById('speed').value = params.speed;
+      document.getElementById('v-speed').textContent = params.speed;
+      document.getElementById('deposit').value = params.deposit;
+      document.getElementById('v-deposit').textContent = params.deposit;
+      document.getElementById('decay').value = params.decay;
+      document.getElementById('v-decay').textContent = params.decay;
+      document.getElementById('renderScale').value = params.renderScale;
+      document.getElementById('v-scale').textContent = params.renderScale;
+    }
+
+    function updateStats() {
+      document.getElementById('stats').textContent =
+        `Agents: ${agents.length.toLocaleString()} · Step: ${stepCount.toLocaleString()}`;
+    }
+
+    // ── Slider listeners ────────────────────────────────────
+    const sliderMap = {
+      agents:       { key: 'agents',       parse: v => parseInt(v) },
+      species:      { key: 'species',      parse: v => parseInt(v) },
+      sensorAngle:  { key: 'sensorAngle',  parse: v => parseFloat(v) },
+      sensorDist:   { key: 'sensorDist',   parse: v => parseInt(v) },
+      turnAngle:    { key: 'turnAngle',    parse: v => parseFloat(v) },
+      speed:        { key: 'speed',        parse: v => parseFloat(v) },
+      deposit:      { key: 'deposit',      parse: v => parseFloat(v) },
+      decay:        { key: 'decay',        parse: v => parseFloat(v) },
+      renderScale:  { key: 'renderScale',  parse: v => parseInt(v) },
+    };
+
+    Object.entries(sliderMap).forEach(([id, cfg]) => {
+      const el = document.getElementById(id);
+      el.addEventListener('input', () => {
+        params[cfg.key] = cfg.parse(el.value);
+        const vEl = document.getElementById('v-' + id);
+        if (id === 'sensorAngle' || id === 'turnAngle') {
+          vEl.textContent = params[cfg.key] + '°';
+        } else {
+          vEl.textContent = params[cfg.key];
+        }
+        // Reinit on agent count, species, or render scale change
+        if (id === 'agents' || id === 'species' || id === 'renderScale') {
+          init();
+        }
+      });
+    });
+
+    // ── Preset buttons ──────────────────────────────────────
+    document.getElementById('presets').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-preset]');
+      if (!btn) return;
+      document.querySelectorAll('#presets .preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const p = PRESETS[btn.dataset.preset];
+      if (p) {
+        params = { ...p };
+        syncUI();
+        init();
+      }
+    });
+
+    // ── Palette buttons ─────────────────────────────────────
+    document.getElementById('palettes').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-pal]');
+      if (!btn) return;
+      document.querySelectorAll('#palettes .mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      paletteName = btn.dataset.pal;
+    });
+
+    // ── Display mode ────────────────────────────────────────
+    document.getElementById('mode-palette').addEventListener('click', () => {
+      displayMode = 'palette';
+      document.getElementById('mode-palette').classList.add('active');
+      document.getElementById('mode-mono').classList.remove('active');
+      document.getElementById('mode-species').classList.remove('active');
+    });
+    document.getElementById('mode-mono').addEventListener('click', () => {
+      displayMode = 'mono';
+      document.getElementById('mode-mono').classList.add('active');
+      document.getElementById('mode-palette').classList.remove('active');
+      document.getElementById('mode-species').classList.remove('active');
+    });
+    document.getElementById('mode-species').addEventListener('click', () => {
+      displayMode = 'species';
+      document.getElementById('mode-species').classList.add('active');
+      document.getElementById('mode-palette').classList.remove('active');
+      document.getElementById('mode-mono').classList.remove('active');
+    });
+
+    // ── Buttons ─────────────────────────────────────────────
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      init();
+    });
+
+    document.getElementById('btn-snapshot').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = 'physarum-' + Date.now() + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+
+    // ── Share ───────────────────────────────────────────────
+    window.getShareParams = function() {
+      return { ...params, displayMode, paletteName };
+    };
+    window.applyShareParams = function(p) {
+      if (p) {
+        params.agents = p.agents ?? params.agents;
+        params.species = p.species ?? params.species;
+        params.sensorAngle = p.sensorAngle ?? params.sensorAngle;
+        params.sensorDist = p.sensorDist ?? params.sensorDist;
+        params.turnAngle = p.turnAngle ?? params.turnAngle;
+        params.speed = p.speed ?? params.speed;
+        params.deposit = p.deposit ?? params.deposit;
+        params.decay = p.decay ?? params.decay;
+        params.renderScale = p.renderScale ?? params.renderScale;
+        displayMode = p.displayMode || 'palette';
+        paletteName = p.paletteName || 'biolum';
+        syncUI();
+        init();
+      }
+    };
+
+    // Share button
+    document.getElementById('btn-share').addEventListener('click', () => {
+      const json = JSON.stringify(window.getShareParams());
+      const b64 = btoa(unescape(encodeURIComponent(json)));
+      const safe = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const url = location.origin + location.pathname + '?p=' + safe;
+      navigator.clipboard.writeText(url).then(() => {
+        const toast = document.createElement('div');
+        toast.textContent = '🔗 Link copied!';
+        Object.assign(toast.style, {
+          position: 'fixed', top: '72px', left: '50%', transform: 'translateX(-50%)',
+          padding: '8px 20px', background: 'rgba(100,200,100,0.9)', color: '#fff',
+          borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', zIndex: '10001',
+          pointerEvents: 'none', transition: 'opacity 0.4s',
+          fontFamily: 'system-ui, sans-serif',
+        });
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+        setTimeout(() => { toast.remove(); }, 2900);
+      }).catch(() => {});
+    });
+
+    // ── Randomize ───────────────────────────────────────────
+    window.shortcuts_random = function() {
+      const keys = Object.keys(PRESETS);
+      const rp = PRESETS[keys[Math.floor(Math.random() * keys.length)]];
+      params = { ...rp };
+      const palKeys = Object.keys(PALETTES);
+      paletteName = palKeys[Math.floor(Math.random() * palKeys.length)];
+      document.querySelectorAll('#palettes .mode-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.pal === paletteName);
+      });
+      syncUI();
+      init();
+    };
+
+    // ── Pause ───────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target === document.body) {
+        e.preventDefault();
+        paused = !paused;
+        const btn = document.getElementById('btn-reset');
+        // Visual indicator
+        document.querySelector('.hint-overlay').textContent = paused
+          ? '⏸ Paused — press Space to resume'
+          : 'Watch virtual slime mold organisms create organic networks';
+      }
+    });
+
+    // ── Restore from URL ────────────────────────────────────
+    function restoreFromURL() {
+      const params_q = new URLSearchParams(location.search);
+      const p = params_q.get('p');
+      if (p && typeof window.applyShareParams === 'function') {
+        try {
+          let b64 = p.replace(/-/g, '+').replace(/_/g, '/');
+          while (b64.length % 4) b64 += '=';
+          const json = decodeURIComponent(escape(atob(b64)));
+          const parsed = JSON.parse(json);
+          setTimeout(() => window.applyShareParams(parsed), 100);
+          return true;
+        } catch (e) { console.warn('Failed to parse share params', e); }
+      }
+      return false;
+    }
+
+    // ── Init ────────────────────────────────────────────────
+    syncUI();
+    window.addEventListener('resize', resize);
+    resize();
+    if (!restoreFromURL()) {
+      init();
+    }
+    loop();
+
+    // Periodic stats update
+    setInterval(updateStats, 1000);
+  })();
+  </script>
+</body>
+</html>
