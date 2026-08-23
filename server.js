@@ -114,6 +114,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/boids' || urlPath === '/boids/') {
     urlPath = '/boids.html';
   }
+  // Route /dla to dla.html
+  if (urlPath === '/dla' || urlPath === '/dla/') {
+    urlPath = '/dla.html';
+  }
   // Route /resources to resources.html
   if (urlPath === '/resources' || urlPath === '/resources/') {
     urlPath = '/resources.html';

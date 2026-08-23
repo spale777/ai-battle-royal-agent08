@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diffusion-Limited Aggregation — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Diffusion-Limited Aggregation — watch particles random-walk and stick to form organic branching structures like snowflakes, coral, and lightning.">
+  <meta property="og:title" content="Diffusion-Limited Aggregation — agent-08 Digital Art Lab">
+  <meta property="og:description" content="DLA creates organic branching patterns from particle aggregation. Snowflakes, coral, lightning.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://agent-08.sklopocija.com/dla">
+  <meta property="og:image" content="https://agent-08.sklopocija.com/images/hero.png">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❄️</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a0f; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+
+    .lab-layout {
+      display: flex; height: 100vh; padding-top: 56px;
+    }
+    .lab-canvas-wrap {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0a0f;
+    }
+    .lab-canvas-wrap canvas {
+      display: block; max-width: 100%; max-height: 100%;
+      cursor: crosshair;
+    }
+
+    .lab-sidebar {
+      width: 280px; min-width: 280px;
+      background: #0f0f18;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto; padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 0.8rem;
+    }
+    .lab-sidebar h2 {
+      font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;
+      color: #7eb8ff; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .lab-sidebar h3 {
+      font-size: 0.85rem; font-weight: 600; color: #aaa;
+      margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    .control-group { margin-bottom: 0.4rem; }
+    .control-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;
+    }
+    .control-label .val { color: #7eb8ff; font-weight: 600; font-size: 0.75rem; }
+
+    input[type="range"] {
+      width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+      background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer;
+    }
+
+    select {
+      width: 100%; padding: 0.4rem; font-size: 0.8rem;
+      background: #1a1a2e; color: #e0e0e8; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px; cursor: pointer;
+    }
+
+    .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .btn {
+      flex: 1; min-width: 0; padding: 0.45rem 0.6rem; font-size: 0.75rem;
+      background: #1a1a2e; color: #7eb8ff; border: 1px solid rgba(126,184,255,0.3);
+      border-radius: 4px; cursor: pointer; text-align: center;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #252540; border-color: #7eb8ff; }
+    .btn.active { background: #7eb8ff; color: #0a0a0f; }
+
+    .btn-action {
+      padding: 0.5rem 0.8rem; font-size: 0.8rem; font-weight: 600;
+      background: rgba(126,184,255,0.15); color: #7eb8ff;
+      border: 1px solid rgba(126,184,255,0.3); border-radius: 6px;
+      cursor: pointer; transition: all 0.2s; width: 100%;
+    }
+    .btn-action:hover { background: rgba(126,184,255,0.25); }
+
+    .btn-danger {
+      color: #ff6b6b; border-color: rgba(255,107,107,0.3);
+      background: rgba(255,107,107,0.1);
+    }
+    .btn-danger:hover { background: rgba(255,107,107,0.2); }
+
+    .info-bar {
+      position: absolute; bottom: 1rem; left: 1rem;
+      display: flex; gap: 1rem; font-size: 0.75rem; color: #888;
+      background: rgba(10,10,15,0.85); padding: 0.4rem 0.8rem;
+      border-radius: 6px; backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+    .info-bar span { color: #7eb8ff; font-weight: 600; }
+
+    .badge {
+      position: absolute; top: 1rem; left: 1rem;
+      background: rgba(126,184,255,0.15); color: #7eb8ff;
+      font-size: 0.65rem; padding: 0.25rem 0.5rem; border-radius: 4px;
+      border: 1px solid rgba(126,184,255,0.25);
+      z-index: 10; opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+
+    .section-divider {
+      border: none; border-top: 1px solid rgba(255,255,255,0.06);
+      margin: 0.25rem 0;
+    }
+
+    .palette-preview {
+      display: flex; gap: 3px; margin-top: 0.25rem;
+    }
+    .palette-swatch {
+      width: 100%; height: 8px; border-radius: 2px;
+    }
+
+    @media (max-width: 768px) {
+      .lab-layout { flex-direction: column; }
+      .lab-sidebar {
+        width: 100%; min-width: 0; max-height: 40vh;
+        border-left: none; border-top: 1px solid rgba(255,255,255,0.06);
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous">Lissajous</a>
+        <a href="/spirograph">Spirograph</a>
+        <a href="/particle-life">Life</a>
+        <a href="/noise">Noise</a>
+        <a href="/cellular">Automata</a>
+        <a href="/voronoi">Voronoi</a>
+        <a href="/metaballs">Metaballs</a>
+        <a href="/attract">Attractors</a>
+        <a href="/wave">Waves</a>
+        <a href="/lsystem">L-Systems</a>
+        <a href="/physarum">Physarum</a>
+        <a href="/maze">Maze</a>
+        <a href="/boids">Boids</a>
+        <a href="/dla" class="active">DLA</a>
+        <a href="/resources">Resources</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="lab-layout">
+    <div class="lab-canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div class="badge" id="badge">❄️ Diffusion-Limited Aggregation</div>
+      <div class="info-bar">
+        <div>Particles: <span id="info-particles">0</span></div>
+        <div>Stuck: <span id="info-stuck">0</span></div>
+        <div>FPS: <span id="info-fps">0</span></div>
+        <div>Rate: <span id="info-rate">0</span>/s</div>
+      </div>
+    </div>
+
+    <div class="lab-sidebar">
+      <h2>❄️ Diffusion-Limited Aggregation</h2>
+
+      <h3>Growth Mode</h3>
+      <div class="control-group">
+        <select id="seed-type">
+          <option value="center">Center Point</option>
+          <option value="ring">Ring</option>
+          <option value="line">Horizontal Line</option>
+          <option value="cross">Cross</option>
+          <option value="grid">Grid</option>
+          <option value="circle">Circle Outline</option>
+          <option value="corner">Corner</option>
+          <option value="custom">Custom (Click)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Particles per frame <span class="val" id="val-speed">50</span></label>
+        <input type="range" id="ctrl-speed" min="1" max="500" value="50">
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Walk radius <span class="val" id="val-radius">1</span></label>
+        <input type="range" id="ctrl-radius" min="1" max="5" value="1" step="1">
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Stick probability <span class="val" id="val-stick">100%</span></label>
+        <input type="range" id="ctrl-stick" min="1" max="100" value="100">
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Stick neighbors <span class="val" id="val-neighbors">4</span></label>
+        <input type="range" id="ctrl-neighbors" min="1" max="8" value="4">
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Cell size <span class="val" id="val-cellsize">3</span></label>
+        <input type="range" id="ctrl-cellsize" min="1" max="6" value="3">
+      </div>
+
+      <hr class="section-divider">
+
+      <h3>Appearance</h3>
+      <div class="control-group">
+        <label class="control-label">Palette</label>
+        <select id="palette">
+          <option value="ice">Ice Crystal</option>
+          <option value="coral">Coral Reef</option>
+          <option value="lightning">Lightning</option>
+          <option value="forest">Forest Canopy</option>
+          <option value="neon">Neon Frost</option>
+          <option value="thermal">Thermal</option>
+          <option value="ocean">Ocean Depth</option>
+          <option value="lava">Lava Dendrite</option>
+          <option value="rainbow">Rainbow</option>
+          <option value="pastel">Pastel Crystal</option>
+          <option value="sunset">Sunset</option>
+          <option value="grayscale">Grayscale</option>
+        </select>
+        <div class="palette-preview" id="palette-preview"></div>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Color mode</label>
+        <select id="color-mode">
+          <option value="age">By Age</option>
+          <option value="distance">By Distance</option>
+          <option value="branch">By Branch</option>
+          <option value="random">Random</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Trail visibility <span class="val" id="val-trail">80%</span></label>
+        <input type="range" id="ctrl-trail" min="0" max="100" value="80">
+      </div>
+
+      <hr class="section-divider">
+
+      <h3>Presets</h3>
+      <div class="btn-row">
+        <button class="btn" onclick="applyPreset('snowflake')">❄️ Snowflake</button>
+        <button class="btn" onclick="applyPreset('coral')">🪸 Coral</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="applyPreset('lightning')">⚡ Lightning</button>
+        <button class="btn" onclick="applyPreset('crystal')">💎 Crystal</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="applyPreset('dendrite')">🌿 Dendrite</button>
+        <button class="btn" onclick="applyPreset('dense')">🔘 Dense</button>
+      </div>
+
+      <hr class="section-divider">
+
+      <button class="btn-action" id="btn-play" onclick="togglePlay()">⏸ Pause</button>
+      <button class="btn-action" onclick="resetSim()">🔄 Reset</button>
+      <button class="btn-action" id="btn-snapshot" onclick="savePNG()">📷 Save PNG</button>
+
+      <hr class="section-divider">
+
+      <h3>Click Mode</h3>
+      <p style="font-size:0.75rem; color:#666; margin:0;">When "Custom" seed is selected, click on the canvas to place seed points. Right-click to remove nearby seeds.</p>
+    </div>
+  </div>
+
+  <script src="/shortcuts.js"></script>
+  <script src="/share.js"></script>
+  <script>
+  // ═══════════════════════════════════════════════════════════════
+  // Diffusion-Limited Aggregation
+  // ═══════════════════════════════════════════════════════════════
+
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  // --- Config ---
+  const CFG = {
+    seedType: 'center',
+    speed: 50,
+    walkRadius: 1,
+    stickProb: 100,
+    stickNeighbors: 4,
+    cellSize: 3,
+    palette: 'ice',
+    colorMode: 'age',
+    trailAlpha: 0.8,
+  };
+
+  // --- Palettes ---
+  const PALETTES = {
+    ice:       ['#e8f4f8','#b8e0f0','#7cc5e8','#4db8d9','#2a9cc9','#1a7db5','#0d5e8a','#0a3d5c'],
+    coral:     ['#fff0e6','#ffb399','#ff8066','#ff4d33','#cc3319','#99260f','#661a0a','#330d05'],
+    lightning: ['#ffffcc','#ffff99','#ffff66','#ffcc00','#ff9900','#ff6600','#cc3300','#990000'],
+    forest:    ['#f0fff0','#b8f0b8','#7de87d','#4db84d','#2a9c2a','#1a7d1a','#0d5e0d','#0a3d0a'],
+    neon:      ['#ff00ff','#cc33ff','#9966ff','#6699ff','#33ccff','#00ffff','#33ffcc','#66ff99'],
+    thermal:   ['#000033','#000099','#0033cc','#0099ff','#00ff99','#ffff00','#ff6600','#ff0000'],
+    ocean:     ['#001a33','#003366','#004d99','#0066cc','#0080ff','#3399ff','#66b3ff','#99ccff'],
+    lava:      ['#1a0000','#330000','#660000','#991a00','#cc3300','#ff4d00','#ff8000','#ffcc00'],
+    rainbow:   ['#ff0000','#ff8800','#ffff00','#00ff00','#0088ff','#0000ff','#8800ff','#ff00ff'],
+    pastel:    ['#ffd1dc','#c8e6ff','#d4ffd4','#fff3b8','#e6c8ff','#b8ffe6','#ffe6c8','#c8ffb8'],
+    sunset:    ['#1a0a2e','#3d1155','#7a2c6e','#c74b6f','#f4845f','#f7b267','#f7d794','#fff9db'],
+    grayscale: ['#ffffff','#cccccc','#999999','#777777','#555555','#333333','#222222','#111111'],
+  };
+
+  // --- State ---
+  let grid;         // Uint8Array: 0 = empty, 1 = stuck
+  let ageGrid;      // Uint32Array: iteration when stuck
+  let branchGrid;   // Uint16Array: branch id
+  let particles;    // Array of {x, y}
+  let stuckCount = 0;
+  let totalIterations = 0;
+  let running = true;
+  let gridW, gridH;
+  let animId;
+  let lastTime = performance.now();
+  let fps = 0;
+  let ratePerSec = 0;
+  let stuckThisSecond = 0;
+  let secondTimer = 0;
+  let branchCounter = 0;
+
+  // --- Resize ---
+  function resize() {
+    const wrap = canvas.parentElement;
+    const size = Math.min(wrap.clientWidth, wrap.clientHeight) - 20;
+    canvas.width = size;
+    canvas.height = size;
+    gridW = Math.ceil(size / CFG.cellSize);
+    gridH = Math.ceil(size / CFG.cellSize);
+  }
+
+  // --- Init grid ---
+  function initGrid() {
+    grid = new Uint8Array(gridW * gridH);
+    ageGrid = new Uint32Array(gridW * gridH);
+    branchGrid = new Uint16Array(gridW * gridH);
+    stuckCount = 0;
+    totalIterations = 0;
+    stuckThisSecond = 0;
+    branchCounter = 0;
+
+    // Seed
+    const cx = Math.floor(gridW / 2);
+    const cy = Math.floor(gridH / 2);
+    const r = Math.floor(gridW / 4);
+
+    switch (CFG.seedType) {
+      case 'center':
+        seedCell(cx, cy);
+        break;
+      case 'ring':
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          seedCell(cx + Math.round(Math.cos(a) * r), cy + Math.round(Math.sin(a) * r));
+        }
+        break;
+      case 'line':
+        for (let x = cx - r; x <= cx + r; x++) seedCell(x, cy);
+        break;
+      case 'cross':
+        for (let x = cx - r; x <= cx + r; x++) seedCell(x, cy);
+        for (let y = cy - r; y <= cy + r; y++) seedCell(cx, y);
+        break;
+      case 'grid': {
+        const spacing = Math.max(4, Math.floor(r / 3));
+        for (let x = cx - r; x <= cx + r; x += spacing) {
+          for (let y = cy - r; y <= cy + r; y += spacing) {
+            seedCell(x, y);
+          }
+        }
+        break;
+      }
+      case 'circle':
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          seedCell(cx + Math.round(Math.cos(a) * r), cy + Math.round(Math.sin(a) * r));
+        }
+        break;
+      case 'corner':
+        seedCell(0, 0);
+        seedCell(gridW - 1, 0);
+        seedCell(0, gridH - 1);
+        seedCell(gridW - 1, gridH - 1);
+        break;
+      case 'custom':
+        // Seeds placed by clicking
+        break;
+    }
+
+    // Spawn particles
+    particles = [];
+    spawnParticles(CFG.speed * 5);
+  }
+
+  function seedCell(gx, gy) {
+    if (gx < 0 || gx >= gridW || gy < 0 || gy >= gridH) return;
+    const idx = gy * gridW + gx;
+    if (grid[idx]) return;
+    grid[idx] = 1;
+    ageGrid[idx] = 0;
+    branchGrid[idx] = ++branchCounter;
+    stuckCount++;
+  }
+
+  function spawnParticles(n) {
+    for (let i = 0; i < n; i++) {
+      particles.push(createParticle());
+    }
+  }
+
+  function createParticle() {
+    // Spawn from edges (random walk from outside in)
+    const side = Math.random() * 4 | 0;
+    let x, y;
+    switch (side) {
+      case 0: x = Math.random() * gridW | 0; y = 0; break;           // top
+      case 1: x = gridW - 1; y = Math.random() * gridH | 0; break;  // right
+      case 2: x = Math.random() * gridW | 0; y = gridH - 1; break;  // bottom
+      case 3: x = 0; y = Math.random() * gridH | 0; break;          // left
+    }
+    return { x, y };
+  }
+
+  // --- Neighbor check ---
+  function hasNeighbor(x, y) {
+    const dirs4 = [[0,1],[0,-1],[1,0],[-1,0]];
+    const dirs8 = dirs4.concat([[1,1],[1,-1],[-1,1],[-1,-1]]);
+    const dirs = CFG.stickNeighbors <= 4 ? dirs4 : dirs8;
+    for (const [dx, dy] of dirs) {
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH) {
+        if (grid[ny * gridW + nx]) return true;
+      }
+    }
+    return false;
+  }
+
+  // --- Step particles ---
+  function stepParticles() {
+    const alive = [];
+    const newBranchIds = [];
+
+    for (const p of particles) {
+      // Random walk
+      const dr = CFG.walkRadius;
+      p.x += (Math.random() * (2 * dr + 1) | 0) - dr;
+      p.y += (Math.random() * (2 * dr + 1) | 0) - dr;
+
+      // Wrap (toroidal)
+      if (p.x < 0) p.x += gridW;
+      if (p.x >= gridW) p.x -= gridW;
+      if (p.y < 0) p.y += gridH;
+      if (p.y >= gridH) p.y -= gridH;
+
+      // Check stick
+      if (hasNeighbor(p.x, p.y)) {
+        if (Math.random() * 100 < CFG.stickProb) {
+          const idx = p.y * gridW + p.x;
+          if (!grid[idx]) {
+            grid[idx] = 1;
+            ageGrid[idx] = totalIterations;
+            // Assign branch: inherit from a stuck neighbor or create new
+            const neighborBranch = findNeighborBranch(p.x, p.y);
+            branchGrid[idx] = neighborBranch || ++branchCounter;
+            stuckCount++;
+            stuckThisSecond++;
+          }
+          continue; // particle is stuck, don't add to alive
+        }
+      }
+      alive.push(p);
+    }
+
+    particles = alive;
+    totalIterations += CFG.speed;
+  }
+
+  function findNeighborBranch(x, y) {
+    const dirs = [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]];
+    let bestBranch = 0;
+    for (const [dx, dy] of dirs) {
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH) {
+        const idx = ny * gridW + nx;
+        if (grid[idx] && branchGrid[idx]) {
+          if (!bestBranch || branchGrid[idx] < bestBranch) {
+            bestBranch = branchGrid[idx];
+          }
+        }
+      }
+    }
+    return bestBranch;
+  }
+
+  // --- Rendering ---
+  function getStuckColor(idx) {
+    const pal = PALETTES[CFG.palette];
+    const len = pal.length;
+    let t;
+
+    switch (CFG.colorMode) {
+      case 'age': {
+        const age = totalIterations - ageGrid[idx];
+        t = stuckCount > 1 ? age / totalIterations : 0;
+        break;
+      }
+      case 'distance': {
+        const gx = idx % gridW;
+        const gy = (idx / gridW) | 0;
+        const cx = gridW / 2, cy = gridH / 2;
+        const dist = Math.sqrt((gx - cx) ** 2 + (gy - cy) ** 2);
+        t = dist / (Math.sqrt(cx * cx + cy * cy) * 0.8);
+        break;
+      }
+      case 'branch': {
+        t = branchGrid[idx] / branchCounter;
+        break;
+      }
+      case 'random': {
+        // Use a hash of idx for deterministic random
+        t = ((idx * 2654435761) & 0x7fffffff) / 0x7fffffff;
+        break;
+      }
+      default:
+        t = 0;
+    }
+
+    t = Math.max(0, Math.min(1, t));
+    const i = Math.floor(t * (len - 1));
+    return pal[i];
+  }
+
+  function render() {
+    const cs = CFG.cellSize;
+    const imgData = ctx.createImageData(canvas.width, canvas.height);
+    const data = imgData.data;
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // Clear with trail effect
+    const trailFactor = CFG.trailAlpha;
+    for (let i = 0; i < data.length; i += 4) {
+      data[i]     = 10;   // R
+      data[i + 1] = 10;   // G
+      data[i + 2] = 15;   // B
+      data[i + 3] = 255;
+    }
+
+    // Draw stuck cells
+    for (let gy = 0; gy < gridH; gy++) {
+      for (let gx = 0; gx < gridW; gx++) {
+        const idx = gy * gridW + gx;
+        if (!grid[idx]) continue;
+
+        const color = getStuckColor(idx);
+        // Parse hex color
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+
+        // Fill cell pixels
+        const px0 = gx * cs;
+        const py0 = gy * cs;
+        const px1 = Math.min(px0 + cs, w);
+        const py1 = Math.min(py0 + cs, h);
+
+        for (let py = py0; py < py1; py++) {
+          for (let px = px0; px < px1; px++) {
+            const pi = (py * w + px) * 4;
+            data[pi]     = r;
+            data[pi + 1] = g;
+            data[pi + 2] = b;
+            data[pi + 3] = 255;
+          }
+        }
+      }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+
+    // Draw active particles as faint dots
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    for (const p of particles) {
+      ctx.fillRect(p.x * cs, p.y * cs, 1, 1);
+    }
+  }
+
+  // --- Animation loop ---
+  function loop(now) {
+    if (!running) { animId = requestAnimationFrame(loop); return; }
+
+    const dt = now - lastTime;
+    lastTime = now;
+
+    // FPS tracking
+    if (dt > 0) {
+      fps = Math.round(1000 / dt);
+    }
+
+    // Rate per second tracking
+    secondTimer += dt;
+    if (secondTimer >= 1000) {
+      ratePerSec = stuckThisSecond;
+      stuckThisSecond = 0;
+      secondTimer -= 1000;
+    }
+
+    // Step
+    for (let i = 0; i < 3; i++) {  // multiple steps per frame for speed
+      if (particles.length < 1000 && stuckCount > 0) {
+        spawnParticles(CFG.speed);
+      }
+      if (particles.length > 0) stepParticles();
+    }
+
+    // Render
+    render();
+
+    // Update info
+    document.getElementById('info-particles').textContent = particles.length.toLocaleString();
+    document.getElementById('info-stuck').textContent = stuckCount.toLocaleString();
+    document.getElementById('info-fps').textContent = fps;
+    document.getElementById('info-rate').textContent = ratePerSec.toLocaleString();
+
+    animId = requestAnimationFrame(loop);
+  }
+
+  // --- Controls ---
+  function bindControl(id, key, display, transform) {
+    const el = document.getElementById(id);
+    const valEl = document.getElementById(display);
+    el.addEventListener('input', () => {
+      const v = transform ? transform(el.value) : parseFloat(el.value);
+      CFG[key] = v;
+      valEl.textContent = typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(2)) : v;
+    });
+  }
+
+  bindControl('ctrl-speed', 'speed', 'val-speed', v => parseInt(v));
+  bindControl('ctrl-radius', 'walkRadius', 'val-radius', v => parseInt(v));
+  bindControl('ctrl-stick', 'stickProb', 'val-stick', v => v + '%');
+  bindControl('ctrl-neighbors', 'stickNeighbors', 'val-neighbors', v => parseInt(v));
+  bindControl('ctrl-cellsize', 'cellSize', 'val-cellsize', v => parseInt(v));
+
+  document.getElementById('ctrl-stick').addEventListener('change', () => {
+    CFG.stickProb = parseInt(document.getElementById('ctrl-stick').value);
+  });
+
+  document.getElementById('ctrl-cellsize').addEventListener('change', () => {
+    CFG.cellSize = parseInt(document.getElementById('ctrl-cellsize').value);
+    resetSim();
+  });
+
+  document.getElementById('seed-type').addEventListener('change', (e) => {
+    CFG.seedType = e.target.value;
+    resetSim();
+  });
+
+  document.getElementById('palette').addEventListener('change', (e) => {
+    CFG.palette = e.target.value;
+    updatePalettePreview();
+  });
+
+  document.getElementById('color-mode').addEventListener('change', (e) => {
+    CFG.colorMode = e.target.value;
+  });
+
+  bindControl('ctrl-trail', 'trailAlpha', 'val-trail', v => parseInt(v) / 100);
+
+  // --- Palette preview ---
+  function updatePalettePreview() {
+    const container = document.getElementById('palette-preview');
+    const pal = PALETTES[CFG.palette];
+    container.innerHTML = '';
+    for (const c of pal) {
+      const swatch = document.createElement('div');
+      swatch.className = 'palette-swatch';
+      swatch.style.background = c;
+      container.appendChild(swatch);
+    }
+  }
+
+  // --- Presets ---
+  const PRESETS = {
+    snowflake: { seedType:'center', speed:30, walkRadius:1, stickProb:100, stickNeighbors:8, cellSize:3, palette:'ice', colorMode:'age', trailAlpha:0.8 },
+    coral:     { seedType:'line', speed:80, walkRadius:1, stickProb:100, stickNeighbors:4, cellSize:2, palette:'coral', colorMode:'distance', trailAlpha:0.9 },
+    lightning: { seedType:'corner', speed:100, walkRadius:1, stickProb:100, stickNeighbors:4, cellSize:3, palette:'lightning', colorMode:'branch', trailAlpha:0.7 },
+    crystal:   { seedType:'center', speed:20, walkRadius:1, stickProb:100, stickNeighbors:8, cellSize:2, palette:'neon', colorMode:'age', trailAlpha:0.85 },
+    dendrite:  { seedType:'center', speed:40, walkRadius:2, stickProb:100, stickNeighbors:8, cellSize:2, palette:'forest', colorMode:'distance', trailAlpha:0.8 },
+    dense:     { seedType:'grid', speed:200, walkRadius:1, stickProb:100, stickNeighbors:4, cellSize:2, palette:'grayscale', colorMode:'random', trailAlpha:1 },
+  };
+
+  window.applyPreset = function(name) {
+    const p = PRESETS[name];
+    if (!p) return;
+    Object.assign(CFG, p);
+    // Update UI
+    document.getElementById('seed-type').value = p.seedType;
+    document.getElementById('ctrl-speed').value = p.speed;
+    document.getElementById('val-speed').textContent = p.speed;
+    document.getElementById('ctrl-radius').value = p.walkRadius;
+    document.getElementById('val-radius').textContent = p.walkRadius;
+    document.getElementById('ctrl-stick').value = p.stickProb;
+    document.getElementById('val-stick').textContent = p.stickProb + '%';
+    document.getElementById('ctrl-neighbors').value = p.stickNeighbors;
+    document.getElementById('val-neighbors').textContent = p.stickNeighbors;
+    document.getElementById('ctrl-cellsize').value = p.cellSize;
+    document.getElementById('val-cellsize').textContent = p.cellSize;
+    document.getElementById('palette').value = p.palette;
+    document.getElementById('color-mode').value = p.colorMode;
+    document.getElementById('ctrl-trail').value = Math.round(p.trailAlpha * 100);
+    document.getElementById('val-trail').textContent = Math.round(p.trailAlpha * 100) + '%';
+    updatePalettePreview();
+    resetSim();
+  };
+
+  // --- Actions ---
+  window.togglePlay = function() {
+    running = !running;
+    document.getElementById('btn-play').textContent = running ? '⏸ Pause' : '▶ Play';
+    if (running) lastTime = performance.now();
+  };
+
+  window.resetSim = function() {
+    resize();
+    initGrid();
+  };
+
+  window.savePNG = function() {
+    const link = document.createElement('a');
+    link.download = 'dla-' + Date.now() + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  // --- Random ---
+  window.shortcuts_random = function() {
+    const presetNames = Object.keys(PRESETS);
+    const name = presetNames[Math.random() * presetNames.length | 0];
+    applyPreset(name);
+  };
+
+  window.shortcuts_redraw = resetSim;
+  window.shortcuts_toggle = togglePlay;
+
+  // --- Share ---
+  window.getShareParams = function() {
+    return { ...CFG };
+  };
+
+  window.applyShareParams = function(p) {
+    if (p.seedType !== undefined) { CFG.seedType = p.seedType; document.getElementById('seed-type').value = p.seedType; }
+    if (p.speed !== undefined) { CFG.speed = p.speed; document.getElementById('ctrl-speed').value = p.speed; document.getElementById('val-speed').textContent = p.speed; }
+    if (p.walkRadius !== undefined) { CFG.walkRadius = p.walkRadius; document.getElementById('ctrl-radius').value = p.walkRadius; document.getElementById('val-radius').textContent = p.walkRadius; }
+    if (p.stickProb !== undefined) { CFG.stickProb = p.stickProb; document.getElementById('ctrl-stick').value = p.stickProb; document.getElementById('val-stick').textContent = p.stickProb + '%'; }
+    if (p.stickNeighbors !== undefined) { CFG.stickNeighbors = p.stickNeighbors; document.getElementById('ctrl-neighbors').value = p.stickNeighbors; document.getElementById('val-neighbors').textContent = p.stickNeighbors; }
+    if (p.cellSize !== undefined) { CFG.cellSize = p.cellSize; document.getElementById('ctrl-cellsize').value = p.cellSize; document.getElementById('val-cellsize').textContent = p.cellSize; }
+    if (p.palette !== undefined) { CFG.palette = p.palette; document.getElementById('palette').value = p.palette; }
+    if (p.colorMode !== undefined) { CFG.colorMode = p.colorMode; document.getElementById('color-mode').value = p.colorMode; }
+    if (p.trailAlpha !== undefined) { CFG.trailAlpha = p.trailAlpha; document.getElementById('ctrl-trail').value = Math.round(p.trailAlpha * 100); document.getElementById('val-trail').textContent = Math.round(p.trailAlpha * 100) + '%'; }
+    updatePalettePreview();
+    resetSim();
+  };
+
+  // --- Canvas click (custom seed mode) ---
+  canvas.addEventListener('click', (e) => {
+    if (CFG.seedType !== 'custom') return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const cx = Math.floor(((e.clientX - rect.left) * scaleX) / CFG.cellSize);
+    const cy = Math.floor(((e.clientY - rect.top) * scaleY) / CFG.cellSize);
+    seedCell(cx, cy);
+  });
+
+  canvas.addEventListener('contextmenu', (e) => {
+    if (CFG.seedType !== 'custom') return;
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const gx = Math.floor(((e.clientX - rect.left) * scaleX) / CFG.cellSize);
+    const gy = Math.floor(((e.clientY - rect.top) * scaleY) / CFG.cellSize);
+    // Remove seeds in radius
+    const radius = 3;
+    for (let dx = -radius; dx <= radius; dx++) {
+      for (let dy = -radius; dy <= radius; dy++) {
+        const nx = gx + dx, ny = gy + dy;
+        if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH) {
+          const idx = ny * gridW + nx;
+          if (grid[idx]) { grid[idx] = 0; stuckCount--; }
+        }
+      }
+    }
+  });
+
+  // --- Init ---
+  updatePalettePreview();
+  resize();
+  initGrid();
+  animId = requestAnimationFrame(loop);
+
+  // Fade badge
+  setTimeout(() => { document.getElementById('badge').style.opacity = '0'; }, 4000);
+  </script>
+</body>
+</html>
