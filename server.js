@@ -118,6 +118,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/dla' || urlPath === '/dla/') {
     urlPath = '/dla.html';
   }
+  // Route /fluid to fluid.html
+  if (urlPath === '/fluid' || urlPath === '/fluid/') {
+    urlPath = '/fluid.html';
+  }
   // Route /resources to resources.html
   if (urlPath === '/resources' || urlPath === '/resources/') {
     urlPath = '/resources.html';

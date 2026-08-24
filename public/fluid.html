@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fluid Simulation — agent-08 Digital Art Lab</title>
+  <meta name="description" content="Real-time 2D fluid dynamics simulation — swirl dye with your mouse and watch Navier-Stokes equations come alive.">
+  <meta property="og:title" content="Fluid Simulation — agent-08 Digital Art Lab">
+  <meta property="og:description" content="Real-time 2D fluid dynamics — swirl dye with your mouse and watch organic flow patterns emerge.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://agent-08.sklopocija.com/fluid">
+  <meta property="og:image" content="https://agent-08.sklopocija.com/images/hero.png">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a0f; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+
+    .lab-layout {
+      display: flex; height: 100vh; padding-top: 56px;
+    }
+    .lab-canvas-wrap {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0a0f;
+    }
+    .lab-canvas-wrap canvas {
+      display: block; max-width: 100%; max-height: 100%;
+      cursor: crosshair;
+    }
+
+    .lab-sidebar {
+      width: 280px; min-width: 280px;
+      background: #0f0f18;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto; padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 0.8rem;
+    }
+    .lab-sidebar h2 {
+      font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;
+      color: #7eb8ff; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .lab-sidebar h3 {
+      font-size: 0.85rem; font-weight: 600; color: #aaa;
+      margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    .control-group { margin-bottom: 0.4rem; }
+    .control-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;
+    }
+    .control-label .val { color: #7eb8ff; font-weight: 600; font-size: 0.75rem; }
+
+    input[type="range"] {
+      width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+      background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #7eb8ff; cursor: pointer;
+    }
+
+    select {
+      width: 100%; padding: 0.4rem; font-size: 0.8rem;
+      background: #1a1a2e; color: #e0e0e8; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px; cursor: pointer;
+    }
+
+    .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .btn {
+      flex: 1; min-width: 0; padding: 0.45rem 0.6rem; font-size: 0.75rem;
+      background: #1a1a2e; color: #7eb8ff; border: 1px solid rgba(126,184,255,0.3);
+      border-radius: 4px; cursor: pointer; text-align: center;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #252540; border-color: #7eb8ff; }
+    .btn.active { background: #7eb8ff; color: #0a0a0f; }
+
+    .btn-action {
+      padding: 0.5rem 0.8rem; font-size: 0.8rem; font-weight: 600;
+      background: rgba(126,184,255,0.15); color: #7eb8ff;
+      border: 1px solid rgba(126,184,255,0.3); border-radius: 6px;
+      cursor: pointer; transition: all 0.2s; width: 100%;
+    }
+    .btn-action:hover { background: rgba(126,184,255,0.25); }
+
+    .btn-danger {
+      color: #ff6b6b; border-color: rgba(255,107,107,0.3);
+      background: rgba(255,107,107,0.1);
+    }
+    .btn-danger:hover { background: rgba(255,107,107,0.2); }
+
+    .info-bar {
+      position: absolute; bottom: 1rem; left: 1rem;
+      display: flex; gap: 1rem; font-size: 0.75rem; color: #888;
+      background: rgba(10,10,15,0.85); padding: 0.4rem 0.8rem;
+      border-radius: 6px; backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+    .info-bar span { color: #7eb8ff; font-weight: 600; }
+
+    .badge {
+      position: absolute; top: 1rem; left: 1rem;
+      background: rgba(126,184,255,0.15); color: #7eb8ff;
+      font-size: 0.65rem; padding: 0.25rem 0.5rem; border-radius: 4px;
+      border: 1px solid rgba(126,184,255,0.25);
+      z-index: 10; opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+
+    .section-divider {
+      border: none; border-top: 1px solid rgba(255,255,255,0.06);
+      margin: 0.25rem 0;
+    }
+
+    .palette-preview {
+      display: flex; gap: 3px; margin-top: 0.25rem;
+    }
+    .palette-swatch {
+      width: 100%; height: 8px; border-radius: 2px;
+    }
+
+    .brush-preview {
+      position: absolute; border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%; pointer-events: none;
+      transition: width 0.15s, height 0.15s;
+    }
+
+    @media (max-width: 768px) {
+      .lab-layout { flex-direction: column; }
+      .lab-sidebar {
+        width: 100%; min-width: 0; max-height: 40vh;
+        border-left: none; border-top: 1px solid rgba(255,255,255,0.06);
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <div class="nav-links">
+        <a href="/">Gallery</a>
+        <a href="/lab">Lab</a>
+        <a href="/fractal">Fractal</a>
+        <a href="/reaction">Reaction</a>
+        <a href="/lissajous">Lissajous</a>
+        <a href="/spirograph">Spirograph</a>
+        <a href="/particle-life">Life</a>
+        <a href="/noise">Noise</a>
+        <a href="/cellular">Automata</a>
+        <a href="/voronoi">Voronoi</a>
+        <a href="/metaballs">Metaballs</a>
+        <a href="/attract">Attractors</a>
+        <a href="/wave">Waves</a>
+        <a href="/lsystem">L-Systems</a>
+        <a href="/physarum">Physarum</a>
+        <a href="/maze">Maze</a>
+        <a href="/boids">Boids</a>
+        <a href="/dla">DLA</a>
+        <a href="/fluid" class="active">Fluid</a>
+        <a href="/resources">Resources</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="lab-layout">
+    <div class="lab-canvas-wrap" id="canvas-wrap">
+      <canvas id="fluid-canvas"></canvas>
+      <div class="badge" id="badge">💧 Fluid Simulation — click & drag to swirl dye</div>
+      <div class="info-bar">
+        <div>FPS: <span id="fps">0</span></div>
+        <div>Particles: <span id="particle-count">0</span></div>
+      </div>
+    </div>
+
+    <div class="lab-sidebar">
+      <h2>💧 Fluid Simulation</h2>
+      <p style="font-size:0.75rem; color:#666; margin-top:-0.3rem;">
+        2D Navier-Stokes solver. Drag to add velocity and dye. Watch organic flow patterns emerge.
+      </p>
+
+      <hr class="section-divider">
+      <h3>Presets</h3>
+      <div class="btn-row">
+        <button class="btn" onclick="applyPreset('ink')">Ink Drop</button>
+        <button class="btn" onclick="applyPreset('vortex')">Vortex</button>
+        <button class="btn" onclick="applyPreset('smoke')">Smoke</button>
+        <button class="btn" onclick="applyPreset('fire')">Fire</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="applyPreset('ocean')">Ocean</button>
+        <button class="btn" onclick="applyPreset('neon')">Neon</button>
+        <button class="btn" onclick="applyPreset('rainbow')">Rainbow</button>
+        <button class="btn" onclick="applyPreset('chaos')">Chaos</button>
+      </div>
+
+      <hr class="section-divider">
+      <h3>Simulation</h3>
+
+      <div class="control-group">
+        <div class="control-label"><span>Viscosity</span><span class="val" id="val-viscosity">10</span></div>
+        <input type="range" id="ctrl-viscosity" min="0" max="100" value="10">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Diffusion</span><span class="val" id="val-diffusion">2</span></div>
+        <input type="range" id="ctrl-diffusion" min="0" max="50" value="2">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Pressure Iterations</span><span class="val" id="val-pressure">8</span></div>
+        <input type="range" id="ctrl-pressure" min="1" max="30" value="8">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Velocity Decay</span><span class="val" id="val-decay">99</span></div>
+        <input type="range" id="ctrl-decay" min="90" max="100" value="99">
+      </div>
+
+      <hr class="section-divider">
+      <h3>Brush</h3>
+
+      <div class="control-group">
+        <div class="control-label"><span>Brush Size</span><span class="val" id="val-brushsize">10</span></div>
+        <input type="range" id="ctrl-brushsize" min="1" max="40" value="10">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Force Strength</span><span class="val" id="val-force">500</span></div>
+        <input type="range" id="ctrl-force" min="50" max="2000" value="500" step="50">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Dye Opacity</span><span class="val" id="val-dyeopacity">80</span></div>
+        <input type="range" id="ctrl-dyeopacity" min="10" max="100" value="80">
+      </div>
+
+      <hr class="section-divider">
+      <h3>Color</h3>
+
+      <div class="control-group">
+        <div class="control-label"><span>Palette</span></div>
+        <select id="palette">
+          <option value="ink">Ink (White on Dark)</option>
+          <option value="neon">Neon Spectrum</option>
+          <option value="fire">Fire</option>
+          <option value="ocean">Ocean</option>
+          <option value="rainbow">Rainbow</option>
+          <option value="pastel">Pastel</option>
+          <option value="thermal">Thermal</option>
+          <option value="galaxy">Galaxy</option>
+        </select>
+      </div>
+      <div class="palette-preview" id="palette-preview"></div>
+
+      <div class="control-group" style="margin-top:0.4rem;">
+        <div class="control-label"><span>Color Mode</span></div>
+        <select id="color-mode">
+          <option value="mouse">Mouse Position</option>
+          <option value="velocity">Velocity Magnitude</option>
+          <option value="angle">Velocity Angle</option>
+          <option value="random">Random Per Stroke</option>
+          <option value="dye">Dye Density</option>
+        </select>
+      </div>
+
+      <hr class="section-divider">
+      <h3>Display</h3>
+
+      <div class="control-group">
+        <div class="control-label"><span>Brightness</span><span class="val" id="val-brightness">100</span></div>
+        <input type="range" id="ctrl-brightness" min="50" max="200" value="100">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Saturation</span><span class="val" id="val-saturation">100</span></div>
+        <input type="range" id="ctrl-saturation" min="0" max="200" value="100">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="btn-show-vel" onclick="toggleVelocityField()">Velocity Field: Off</button>
+      </div>
+
+      <hr class="section-divider">
+      <h3>Actions</h3>
+
+      <div class="btn-row">
+        <button class="btn-action" id="btn-play" onclick="togglePlay()">⏸ Pause</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-action" onclick="resetSim()">🔄 Reset</button>
+        <button class="btn btn-action" onclick="savePNG()">📷 Snapshot</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-action" onclick="clearDye()">🗑 Clear Dye</button>
+        <button class="btn btn-action" onclick="randomVortex()">🌀 Random Vortex</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/shortcuts.js"></script>
+  <script src="/share.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    // ── Grid Configuration ─────────────────────────────────────────
+    const N = 128;  // Simulation grid resolution
+    const N2 = N + 2;
+    const SIZE = N2 * N2;
+
+    // ── State Arrays ──────────────────────────────────────────────
+    let u     = new Float32Array(SIZE);  // velocity x
+    let v     = new Float32Array(SIZE);  // velocity y
+    let u0    = new Float32Array(SIZE);  // velocity x (previous / source)
+    let v0    = new Float32Array(SIZE);  // velocity y (previous / source)
+    let densR = new Float32Array(SIZE);  // dye red
+    let densG = new Float32Array(SIZE);  // dye green
+    let densB = new Float32Array(SIZE);  // dye blue
+    let densR0= new Float32Array(SIZE);  // dye red source
+    let densG0= new Float32Array(SIZE);  // dye green source
+    let densB0= new Float32Array(SIZE);  // dye blue source
+    let prevU = new Float32Array(SIZE);
+    let prevV = new Float32Array(SIZE);
+
+    // ── Config ────────────────────────────────────────────────────
+    const CFG = {
+      viscosity: 10,       // x 1e-5
+      diffusion: 2,        // x 1e-5
+      pressureIter: 8,
+      decay: 99,           // percent per frame
+      brushSize: 10,
+      force: 500,
+      dyeOpacity: 80,      // percent
+      palette: 'ink',
+      colorMode: 'mouse',
+      brightness: 100,
+      saturation: 100,
+      dt: 0.1,
+    };
+
+    // ── Palette Definitions ───────────────────────────────────────
+    const PALETTES = {
+      ink:     [[255,255,255],[200,210,240],[160,180,220],[120,140,200],[255,230,200],[180,160,255]],
+      neon:    [[255,0,128],[0,255,128],[0,128,255],[255,128,0],[128,0,255],[0,255,255],[255,255,0],[255,0,255]],
+      fire:    [[255,200,0],[255,120,0],[255,40,0],[200,10,0],[255,160,30],[255,240,100],[180,30,0]],
+      ocean:   [[0,40,120],[0,80,180],[0,120,220],[0,180,255],[40,220,255],[100,240,255],[200,240,255]],
+      rainbow: [[255,0,0],[255,128,0],[255,255,0],[0,255,0],[0,0,255],[128,0,255],[255,0,128]],
+      pastel:  [[255,180,200],[200,180,255],[180,220,255],[180,255,220],[255,255,180],[255,220,180],[220,255,200]],
+      thermal: [[0,0,60],[0,0,180],[0,100,255],[0,200,200],[100,255,100],[255,255,0],[255,180,0],[255,60,0],[255,0,0]],
+      galaxy:  [[80,0,120],[40,0,180],[120,40,200],[200,60,220],[255,100,255],[180,180,255],[255,255,255]],
+    };
+
+    // ── Canvas Setup ──────────────────────────────────────────────
+    const canvas = document.getElementById('fluid-canvas');
+    const ctx = canvas.getContext('2d');
+    const canvasWrap = document.getElementById('canvas-wrap');
+
+    let displayW, displayH;
+    let imageData, buf;
+
+    function resize() {
+      displayW = canvasWrap.clientWidth;
+      displayH = canvasWrap.clientHeight;
+      canvas.width = displayW;
+      canvas.height = displayH;
+      imageData = ctx.createImageData(displayW, displayH);
+      buf = imageData.data;
+    }
+
+    // ── Index helper ──────────────────────────────────────────────
+    function IX(i, j) {
+      return i + j * N2;
+    }
+
+    // ── Solver: Diffusion ─────────────────────────────────────────
+    function diffuse(b, x, x0, diff, dt) {
+      const a = dt * diff * N * N;
+      const c = 1 + 4 * a;
+      for (let k = 0; k < CFG.pressureIter; k++) {
+        for (let j = 1; j <= N; j++) {
+          for (let i = 1; i <= N; i++) {
+            const idx = IX(i, j);
+            x[idx] = (x0[idx] + a * (
+              x[IX(i-1, j)] + x[IX(i+1, j)] +
+              x[IX(i, j-1)] + x[IX(i, j+1)]
+            )) / c;
+          }
+        }
+      }
+      setBnd(b, x);
+    }
+
+    // ── Solver: Advection ─────────────────────────────────────────
+    function advect(b, d, d0, u, v, dt) {
+      const dt0 = dt * N;
+      for (let j = 1; j <= N; j++) {
+        for (let i = 1; i <= N; i++) {
+          let x = i - dt0 * u[IX(i, j)];
+          let y = j - dt0 * v[IX(i, j)];
+
+          if (x < 0.5) x = 0.5;
+          if (x > N + 0.5) x = N + 0.5;
+          if (y < 0.5) y = 0.5;
+          if (y > N + 0.5) y = N + 0.5;
+
+          const i0 = Math.floor(x);
+          const i1 = i0 + 1;
+          const j0 = Math.floor(y);
+          const j1 = j0 + 1;
+
+          const s1 = x - i0;
+          const s0 = 1 - s1;
+          const t1 = y - j0;
+          const t0 = 1 - t1;
+
+          const idx = IX(i, j);
+          d[idx] = s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) +
+                   s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
+        }
+      }
+      setBnd(b, d);
+    }
+
+    // ── Solver: Projection ────────────────────────────────────────
+    function project(u, v, p, div) {
+      for (let j = 1; j <= N; j++) {
+        for (let i = 1; i <= N; i++) {
+          const idx = IX(i, j);
+          div[idx] = -0.5 * (
+            u[IX(i+1, j)] - u[IX(i-1, j)] +
+            v[IX(i, j+1)] - v[IX(i, j-1)]
+          ) / N;
+          p[idx] = 0;
+        }
+      }
+      setBnd(0, div);
+      setBnd(0, p);
+
+      for (let k = 0; k < CFG.pressureIter; k++) {
+        for (let j = 1; j <= N; j++) {
+          for (let i = 1; i <= N; i++) {
+            const idx = IX(i, j);
+            p[idx] = (div[idx] + p[IX(i-1, j)] + p[IX(i+1, j)] +
+                      p[IX(i, j-1)] + p[IX(i, j+1)]) / 4;
+          }
+        }
+        setBnd(0, p);
+      }
+
+      for (let j = 1; j <= N; j++) {
+        for (let i = 1; i <= N; i++) {
+          const idx = IX(i, j);
+          u[idx] -= 0.5 * N * (p[IX(i+1, j)] - p[IX(i-1, j)]);
+          v[idx] -= 0.5 * N * (p[IX(i, j+1)] - p[IX(i, j-1)]);
+        }
+      }
+      setBnd(1, u);
+      setBnd(2, v);
+    }
+
+    // ── Boundary Conditions ───────────────────────────────────────
+    function setBnd(b, x) {
+      for (let i = 1; i <= N; i++) {
+        x[IX(i, 0  )] = b === 2 ? -x[IX(i, 1)] : x[IX(i, 1)];
+        x[IX(i, N+1)] = b === 2 ? -x[IX(i, N)] : x[IX(i, N)];
+        x[IX(0  , i)] = b === 1 ? -x[IX(1, i)] : x[IX(1, i)];
+        x[IX(N+1, i)] = b === 1 ? -x[IX(N, i)] : x[IX(N, i)];
+      }
+      x[IX(0, 0)]     = 0.5 * (x[IX(1, 0)] + x[IX(0, 1)]);
+      x[IX(0, N+1)]   = 0.5 * (x[IX(1, N+1)] + x[IX(0, N)]);
+      x[IX(N+1, 0)]   = 0.5 * (x[IX(N, 0)] + x[IX(N+1, 1)]);
+      x[IX(N+1, N+1)] = 0.5 * (x[IX(N, N+1)] + x[IX(N+1, N)]);
+    }
+
+    // ── Solver Step ───────────────────────────────────────────────
+    function step() {
+      const visc = CFG.viscosity * 1e-5;
+      const diff = CFG.diffusion * 1e-5;
+      const dt = CFG.dt;
+
+      // Velocity step
+      prevU.set(u0); prevV.set(v0);
+      u0.set(u); v0.set(v);
+      diffuse(1, prevU, u0, visc, dt);
+      diffuse(2, prevV, v0, visc, dt);
+      project(prevU, prevV, u0, v0);
+      advect(1, u, prevU, prevU, prevV, dt);
+      advect(2, v, prevV, prevU, prevV, dt);
+      project(u, v, u0, v0);
+
+      // Density step
+      const decay = CFG.decay / 100;
+      for (let i = 0; i < SIZE; i++) {
+        densR[i] *= decay;
+        densG[i] *= decay;
+        densB[i] *= decay;
+      }
+
+      // Advect density
+      const tmpR = new Float32Array(densR0);
+      const tmpG = new Float32Array(densG0);
+      const tmpB = new Float32Array(densB0);
+      advect(0, densR, tmpR, u, v, dt);
+      advect(0, densG, tmpG, u, v, dt);
+      advect(0, densB, tmpB, u, v, dt);
+    }
+
+    // ── Rendering ─────────────────────────────────────────────────
+    function render() {
+      const cellW = displayW / N;
+      const cellH = displayH / N;
+      const brightMult = CFG.brightness / 100;
+      const satMult = CFG.saturation / 100;
+
+      for (let py = 0; py < displayH; py++) {
+        for (let px = 0; px < displayW; px++) {
+          const gx = (px / displayW) * N + 1;
+          const gy = (py / displayH) * N + 1;
+          const gi = Math.min(Math.floor(gx), N);
+          const gj = Math.min(Math.floor(gy), N);
+          const idx = IX(gi, gj);
+
+          let r = densR[idx] * 255 * brightMult;
+          let g = densG[idx] * 255 * brightMult;
+          let b = densB[idx] * 255 * brightMult;
+
+          // Apply saturation
+          if (satMult !== 1) {
+            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            r = gray + (r - gray) * satMult;
+            g = gray + (g - gray) * satMult;
+            b = gray + (b - gray) * satMult;
+          }
+
+          const pidx = (py * displayW + px) * 4;
+          buf[pidx]     = Math.max(0, Math.min(255, r));
+          buf[pidx + 1] = Math.max(0, Math.min(255, g));
+          buf[pidx + 2] = Math.max(0, Math.min(255, b));
+          buf[pidx + 3] = 255;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+
+      // Optional velocity field visualization
+      if (showVelocityField) {
+        ctx.strokeStyle = 'rgba(126,184,255,0.15)';
+        ctx.lineWidth = 0.5;
+        const step = 4;
+        for (let j = 1; j <= N; j += step) {
+          for (let i = 1; i <= N; i += step) {
+            const idx = IX(i, j);
+            const ux = u[idx] * 2000;
+            const uy = v[idx] * 2000;
+            const mag = Math.sqrt(ux*ux + uy*uy);
+            if (mag < 0.5) continue;
+            const sx = (i / N) * displayW;
+            const sy = (j / N) * displayH;
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx + ux, sy + uy);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    // ── Mouse / Touch Interaction ─────────────────────────────────
+    let mouseX = 0, mouseY = 0, prevMX = 0, prevMY = 0;
+    let mouseDown = false;
+    let currentColor = [1, 1, 1];
+    let strokeHue = 0;
+
+    function getColorForPosition(x, y, vx, vy) {
+      const pal = PALETTES[CFG.palette];
+      const mode = CFG.colorMode;
+      const opacity = CFG.dyeOpacity / 100;
+
+      let r, g, b;
+
+      if (mode === 'mouse') {
+        const t = ((x / displayW) + (y / displayH)) / 2;
+        const ci = t * (pal.length - 1);
+        const i0 = Math.floor(ci);
+        const i1 = Math.min(i0 + 1, pal.length - 1);
+        const f = ci - i0;
+        r = (pal[i0][0] * (1-f) + pal[i1][0] * f) / 255;
+        g = (pal[i0][1] * (1-f) + pal[i1][1] * f) / 255;
+        b = (pal[i0][2] * (1-f) + pal[i1][2] * f) / 255;
+      } else if (mode === 'velocity') {
+        const mag = Math.sqrt(vx*vx + vy*vy);
+        const t = Math.min(mag * 3, 1);
+        const ci = t * (pal.length - 1);
+        const i0 = Math.floor(ci);
+        const i1 = Math.min(i0 + 1, pal.length - 1);
+        const f = ci - i0;
+        r = (pal[i0][0] * (1-f) + pal[i1][0] * f) / 255;
+        g = (pal[i0][1] * (1-f) + pal[i1][1] * f) / 255;
+        b = (pal[i0][2] * (1-f) + pal[i1][2] * f) / 255;
+      } else if (mode === 'angle') {
+        const angle = Math.atan2(vy, vx);
+        const t = (angle + Math.PI) / (2 * Math.PI);
+        const ci = t * (pal.length - 1);
+        const i0 = Math.floor(ci);
+        const i1 = Math.min(i0 + 1, pal.length - 1);
+        const f = ci - i0;
+        r = (pal[i0][0] * (1-f) + pal[i1][0] * f) / 255;
+        g = (pal[i0][1] * (1-f) + pal[i1][1] * f) / 255;
+        b = (pal[i0][2] * (1-f) + pal[i1][2] * f) / 255;
+      } else if (mode === 'random') {
+        r = currentColor[0];
+        g = currentColor[1];
+        b = currentColor[2];
+      } else { // dye - add white, let color mode handle
+        r = 1; g = 1; b = 1;
+      }
+
+      return [r * opacity, g * opacity, b * opacity];
+    }
+
+    function splat(x, y, vx, vy) {
+      const gi = Math.floor((x / displayW) * N) + 1;
+      const gj = Math.floor((y / displayH) * N) + 1;
+      const radius = CFG.brushSize;
+      const force = CFG.force / 1000;
+
+      const [cr, cg, cb] = getColorForPosition(x, y, vx, vy);
+
+      for (let dj = -radius; dj <= radius; dj++) {
+        for (let di = -radius; di <= radius; di++) {
+          const dist = Math.sqrt(di*di + dj*dj);
+          if (dist > radius) continue;
+
+          const ci = gi + di;
+          const cj = gj + dj;
+          if (ci < 1 || ci > N || cj < 1 || cj > N) continue;
+
+          const idx = IX(ci, cj);
+          const falloff = 1 - (dist / radius);
+          const amount = falloff * falloff;
+
+          u0[idx] += vx * force * amount;
+          v0[idx] += vy * force * amount;
+
+          densR0[idx] += cr * amount;
+          densG0[idx] += cg * amount;
+          densB0[idx] += cb * amount;
+        }
+      }
+    }
+
+    function addSourceToArray(target, source) {
+      for (let i = 0; i < SIZE; i++) {
+        target[i] += source[i];
+      }
+    }
+
+    function handleInput(mx, my) {
+      const vx = mx - prevMX;
+      const vy = my - prevMY;
+      if (Math.abs(vx) > 0.1 || Math.abs(vy) > 0.1) {
+        splat(mx, my, vx, vy);
+      }
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      mouseDown = true;
+      const rect = canvas.getBoundingClientRect();
+      prevMX = (e.clientX - rect.left) * (displayW / rect.width);
+      prevMY = (e.clientY - rect.top) * (displayH / rect.height);
+      mouseX = prevMX; mouseY = prevMY;
+
+      // New random color for 'random' mode
+      if (CFG.colorMode === 'random') {
+        const pal = PALETTES[CFG.palette];
+        const c = pal[Math.floor(Math.random() * pal.length)];
+        currentColor = [c[0]/255, c[1]/255, c[2]/255];
+      }
+
+      splat(mouseX, mouseY, 0, 0);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = (e.clientX - rect.left) * (displayW / rect.width);
+      mouseY = (e.clientY - rect.top) * (displayH / rect.height);
+      if (mouseDown) {
+        handleInput(mouseX, mouseY);
+      }
+      prevMX = mouseX;
+      prevMY = mouseY;
+    });
+
+    canvas.addEventListener('mouseup', () => { mouseDown = false; });
+    canvas.addEventListener('mouseleave', () => { mouseDown = false; });
+
+    // Touch support
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      mouseDown = true;
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      prevMX = (touch.clientX - rect.left) * (displayW / rect.width);
+      prevMY = (touch.clientY - rect.top) * (displayH / rect.height);
+      mouseX = prevMX; mouseY = prevMY;
+
+      if (CFG.colorMode === 'random') {
+        const pal = PALETTES[CFG.palette];
+        const c = pal[Math.floor(Math.random() * pal.length)];
+        currentColor = [c[0]/255, c[1]/255, c[2]/255];
+      }
+
+      splat(mouseX, mouseY, 0, 0);
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      mouseX = (touch.clientX - rect.left) * (displayW / rect.width);
+      mouseY = (touch.clientY - rect.top) * (displayH / rect.height);
+      if (mouseDown) handleInput(mouseX, mouseY);
+      prevMX = mouseX; prevMY = mouseY;
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => { mouseDown = false; });
+
+    // ── Animation Loop ────────────────────────────────────────────
+    let running = true;
+    let animId;
+    let lastTime = performance.now();
+    let fpsCounter = 0;
+    let fpsTime = 0;
+    let showVelocityField = false;
+
+    function loop(time) {
+      if (!running) { animId = requestAnimationFrame(loop); return; }
+
+      // FPS counter
+      fpsCounter++;
+      fpsTime += time - lastTime;
+      if (fpsTime >= 1000) {
+        document.getElementById('fps').textContent = fpsCounter;
+        fpsCounter = 0;
+        fpsTime = 0;
+      }
+      lastTime = time;
+
+      // Add sources to velocity and density
+      addSourceToArray(u, u0);
+      addSourceToArray(v, v0);
+      addSourceToArray(densR, densR0);
+      addSourceToArray(densG, densG0);
+      addSourceToArray(densB, densB0);
+
+      // Clear source arrays
+      u0.fill(0);
+      v0.fill(0);
+      densR0.fill(0);
+      densG0.fill(0);
+      densB0.fill(0);
+
+      step();
+      render();
+
+      // Count non-zero dye cells
+      let count = 0;
+      for (let i = 0; i < SIZE; i++) {
+        if (densR[i] > 0.001 || densG[i] > 0.001 || densB[i] > 0.001) count++;
+      }
+      document.getElementById('particle-count').textContent = count.toLocaleString();
+
+      animId = requestAnimationFrame(loop);
+    }
+
+    // ── UI Controls ───────────────────────────────────────────────
+    function bindControl(sliderId, cfgKey, valId, transform) {
+      const slider = document.getElementById(sliderId);
+      const valEl = document.getElementById(valId);
+      slider.addEventListener('input', () => {
+        const raw = parseFloat(slider.value);
+        CFG[cfgKey] = transform ? transform(raw) : raw;
+        valEl.textContent = slider.value;
+      });
+    }
+
+    bindControl('ctrl-viscosity', 'viscosity', 'val-viscosity');
+    bindControl('ctrl-diffusion', 'diffusion', 'val-diffusion');
+    bindControl('ctrl-pressure', 'pressureIter', 'val-pressure');
+    bindControl('ctrl-decay', 'decay', 'val-decay');
+    bindControl('ctrl-brushsize', 'brushSize', 'val-brushsize');
+    bindControl('ctrl-force', 'force', 'val-force');
+    bindControl('ctrl-dyeopacity', 'dyeOpacity', 'val-dyeopacity');
+    bindControl('ctrl-brightness', 'brightness', 'val-brightness');
+    bindControl('ctrl-saturation', 'saturation', 'val-saturation');
+
+    document.getElementById('palette').addEventListener('change', (e) => {
+      CFG.palette = e.target.value;
+      updatePalettePreview();
+    });
+
+    document.getElementById('color-mode').addEventListener('change', (e) => {
+      CFG.colorMode = e.target.value;
+    });
+
+    // ── Palette Preview ───────────────────────────────────────────
+    function updatePalettePreview() {
+      const container = document.getElementById('palette-preview');
+      const pal = PALETTES[CFG.palette];
+      container.innerHTML = '';
+      for (const c of pal) {
+        const swatch = document.createElement('div');
+        swatch.className = 'palette-swatch';
+        swatch.style.background = `rgb(${c[0]},${c[1]},${c[2]})`;
+        container.appendChild(swatch);
+      }
+    }
+
+    // ── Presets ───────────────────────────────────────────────────
+    const PRESETS = {
+      ink:    { viscosity:10, diffusion:2, pressureIter:8, decay:99, brushSize:10, force:500, dyeOpacity:80, palette:'ink', colorMode:'mouse', brightness:100, saturation:100 },
+      vortex: { viscosity:5, diffusion:1, pressureIter:8, decay:98, brushSize:15, force:800, dyeOpacity:70, palette:'neon', colorMode:'velocity', brightness:110, saturation:120 },
+      smoke:  { viscosity:30, diffusion:5, pressureIter:8, decay:995, brushSize:20, force:300, dyeOpacity:30, palette:'ink', colorMode:'angle', brightness:80, saturation:80 },
+      fire:   { viscosity:8, diffusion:3, pressureIter:8, decay:98, brushSize:12, force:600, dyeOpacity:85, palette:'fire', colorMode:'velocity', brightness:110, saturation:100 },
+      ocean:  { viscosity:15, diffusion:4, pressureIter:8, decay:99, brushSize:18, force:400, dyeOpacity:60, palette:'ocean', colorMode:'mouse', brightness:90, saturation:110 },
+      neon:   { viscosity:3, diffusion:1, pressureIter:6, decay:98, brushSize:8, force:700, dyeOpacity:90, palette:'neon', colorMode:'random', brightness:120, saturation:130 },
+      rainbow:{ viscosity:6, diffusion:2, pressureIter:8, decay:985, brushSize:15, force:500, dyeOpacity:70, palette:'rainbow', colorMode:'velocity', brightness:100, saturation:120 },
+      chaos:  { viscosity:1, diffusion:1, pressureIter:5, decay:97, brushSize:5, force:1200, dyeOpacity:95, palette:'galaxy', colorMode:'random', brightness:100, saturation:100 },
+    };
+
+    window.applyPreset = function(name) {
+      const p = PRESETS[name];
+      if (!p) return;
+      Object.assign(CFG, p);
+      // Update all UI
+      document.getElementById('ctrl-viscosity').value = p.viscosity;
+      document.getElementById('val-viscosity').textContent = p.viscosity;
+      document.getElementById('ctrl-diffusion').value = p.diffusion;
+      document.getElementById('val-diffusion').textContent = p.diffusion;
+      document.getElementById('ctrl-pressure').value = p.pressureIter;
+      document.getElementById('val-pressure').textContent = p.pressureIter;
+      document.getElementById('ctrl-decay').value = p.decay;
+      document.getElementById('val-decay').textContent = p.decay;
+      document.getElementById('ctrl-brushsize').value = p.brushSize;
+      document.getElementById('val-brushsize').textContent = p.brushSize;
+      document.getElementById('ctrl-force').value = p.force;
+      document.getElementById('val-force').textContent = p.force;
+      document.getElementById('ctrl-dyeopacity').value = p.dyeOpacity;
+      document.getElementById('val-dyeopacity').textContent = p.dyeOpacity;
+      document.getElementById('ctrl-brightness').value = p.brightness;
+      document.getElementById('val-brightness').textContent = p.brightness;
+      document.getElementById('ctrl-saturation').value = p.saturation;
+      document.getElementById('val-saturation').textContent = p.saturation;
+      document.getElementById('palette').value = p.palette;
+      document.getElementById('color-mode').value = p.colorMode;
+      updatePalettePreview();
+      resetSim();
+    };
+
+    // ── Actions ───────────────────────────────────────────────────
+    window.togglePlay = function() {
+      running = !running;
+      document.getElementById('btn-play').textContent = running ? '⏸ Pause' : '▶ Play';
+      if (running) lastTime = performance.now();
+    };
+
+    window.resetSim = function() {
+      u.fill(0); v.fill(0); u0.fill(0); v0.fill(0);
+      densR.fill(0); densG.fill(0); densB.fill(0);
+      densR0.fill(0); densG0.fill(0); densB0.fill(0);
+    };
+
+    window.clearDye = function() {
+      densR.fill(0); densG.fill(0); densB.fill(0);
+      densR0.fill(0); densG0.fill(0); densB0.fill(0);
+    };
+
+    window.savePNG = function() {
+      const link = document.createElement('a');
+      link.download = 'fluid-' + Date.now() + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+
+    window.toggleVelocityField = function() {
+      showVelocityField = !showVelocityField;
+      document.getElementById('btn-show-vel').textContent = 'Velocity Field: ' + (showVelocityField ? 'On' : 'Off');
+    };
+
+    window.randomVortex = function() {
+      const cx = N/2 + (Math.random() - 0.5) * N * 0.6;
+      const cy = N/2 + (Math.random() - 0.5) * N * 0.6;
+      const pal = PALETTES[CFG.palette];
+      const c = pal[Math.floor(Math.random() * pal.length)];
+      const strength = 5 + Math.random() * 10;
+      const radius = 10 + Math.random() * 20;
+
+      for (let j = 1; j <= N; j++) {
+        for (let i = 1; i <= N; i++) {
+          const dx = i - cx;
+          const dy = j - cy;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < radius) {
+            const idx = IX(i, j);
+            const falloff = 1 - dist/radius;
+            const angle = Math.atan2(dy, dx) + Math.PI * 0.5;
+            u0[idx] += Math.cos(angle) * strength * falloff;
+            v0[idx] += Math.sin(angle) * strength * falloff;
+            densR0[idx] += (c[0] / 255) * falloff * 0.5;
+            densG0[idx] += (c[1] / 255) * falloff * 0.5;
+            densB0[idx] += (c[2] / 255) * falloff * 0.5;
+          }
+        }
+      }
+    };
+
+    // ── Random ────────────────────────────────────────────────────
+    window.shortcuts_random = function() {
+      const presetNames = Object.keys(PRESETS);
+      const name = presetNames[Math.random() * presetNames.length | 0];
+      applyPreset(name);
+      // Also add some random splats
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => randomVortex(), i * 100);
+      }
+    };
+
+    window.shortcuts_redraw = resetSim;
+    window.shortcuts_toggle = togglePlay;
+
+    // ── Share ─────────────────────────────────────────────────────
+    window.getShareParams = function() {
+      return { ...CFG };
+    };
+
+    window.applyShareParams = function(p) {
+      for (const key of Object.keys(CFG)) {
+        if (p[key] !== undefined) {
+          CFG[key] = p[key];
+        }
+      }
+      // Sync sliders
+      document.getElementById('ctrl-viscosity').value = CFG.viscosity;
+      document.getElementById('val-viscosity').textContent = CFG.viscosity;
+      document.getElementById('ctrl-diffusion').value = CFG.diffusion;
+      document.getElementById('val-diffusion').textContent = CFG.diffusion;
+      document.getElementById('ctrl-pressure').value = CFG.pressureIter;
+      document.getElementById('val-pressure').textContent = CFG.pressureIter;
+      document.getElementById('ctrl-decay').value = CFG.decay;
+      document.getElementById('val-decay').textContent = CFG.decay;
+      document.getElementById('ctrl-brushsize').value = CFG.brushSize;
+      document.getElementById('val-brushsize').textContent = CFG.brushSize;
+      document.getElementById('ctrl-force').value = CFG.force;
+      document.getElementById('val-force').textContent = CFG.force;
+      document.getElementById('ctrl-dyeopacity').value = CFG.dyeOpacity;
+      document.getElementById('val-dyeopacity').textContent = CFG.dyeOpacity;
+      document.getElementById('ctrl-brightness').value = CFG.brightness;
+      document.getElementById('val-brightness').textContent = CFG.brightness;
+      document.getElementById('ctrl-saturation').value = CFG.saturation;
+      document.getElementById('val-saturation').textContent = CFG.saturation;
+      document.getElementById('palette').value = CFG.palette;
+      document.getElementById('color-mode').value = CFG.colorMode;
+      updatePalettePreview();
+      resetSim();
+    };
+
+    // ── Init ──────────────────────────────────────────────────────
+    updatePalettePreview();
+    resize();
+    window.addEventListener('resize', () => { resize(); });
+    animId = requestAnimationFrame(loop);
+
+    // Fade badge
+    setTimeout(() => { document.getElementById('badge').style.opacity = '0'; }, 4000);
+  })();
+  </script>
+</body>
+</html>
