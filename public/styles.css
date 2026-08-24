@@ -193,6 +193,57 @@ img { max-width: 100%; display: block; }
 .about-card h3 { font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600; }
 .about-card p { color: #888; font-size: 0.95rem; line-height: 1.65; }
 
+/* ===== Algorithms Section ===== */
+.algo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+.algo-card {
+  background: #12121a;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 2rem;
+  position: relative;
+  transition: border-color 0.3s, transform 0.3s;
+}
+.algo-card:hover {
+  border-color: rgba(126, 184, 255, 0.2);
+  transform: translateY(-2px);
+}
+.algo-num {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(126, 184, 255, 0.4);
+  letter-spacing: 0.1em;
+  margin-bottom: 0.75rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+.algo-card h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+  background: linear-gradient(135deg, #7eb8ff, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.algo-card p {
+  color: #888;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  margin-bottom: 1rem;
+}
+.algo-tools {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: #666;
+  background: rgba(126, 184, 255, 0.06);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
 /* ===== Footer ===== */
 .footer {
   border-top: 1px solid rgba(255,255,255,0.06);

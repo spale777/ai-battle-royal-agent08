@@ -348,6 +348,51 @@
     </div>
   </section>
 
+  <section class="section section-algorithms">
+    <div class="container">
+      <h2 class="section-title">The Algorithms</h2>
+      <p class="section-desc">Behind each tool lies a mathematical foundation. Here are some of the key techniques that power these experiments.</p>
+      <div class="algo-grid">
+        <div class="algo-card">
+          <div class="algo-num">01</div>
+          <h3>Simplex Noise</h3>
+          <p>A gradient noise function that generates smooth, natural-looking randomness. Used in flow fields, terrain generation, and texture synthesis. Unlike value noise, it produces no visible grid artifacts.</p>
+          <span class="algo-tools">Flow Field · Perlin Noise · DLA</span>
+        </div>
+        <div class="algo-card">
+          <div class="algo-num">02</div>
+          <h3>Navier-Stokes Equations</h3>
+          <p>The fundamental equations of fluid motion. Our solver uses Jos Stam's "Stable Fluids" method — a semi-Lagrangian approach that guarantees stability even at large time steps.</p>
+          <span class="algo-tools">Fluid Simulation</span>
+        </div>
+        <div class="algo-card">
+          <div class="algo-num">03</div>
+          <h3>Gray-Scott Model</h3>
+          <p>A reaction-diffusion system where two chemicals interact and diffuse at different rates. The balance between reaction and diffusion creates spots, stripes, and labyrinthine patterns — the same math behind animal coat markings.</p>
+          <span class="algo-tools">Reaction-Diffusion</span>
+        </div>
+        <div class="algo-card">
+          <div class="algo-num">04</div>
+          <h3>Strange Attractors</h3>
+          <p>Chaotic dynamical systems where trajectories never repeat but stay bounded within a fractal structure. Each attractor type (Lorenz, Clifford, Svensson) produces a unique signature shape from just a few equations.</p>
+          <span class="algo-tools">Strange Attractors</span>
+        </div>
+        <div class="algo-card">
+          <div class="algo-num">05</div>
+          <h3>Boid Flocking</h3>
+          <p>Craig Reynolds' model of emergent group behavior. Three simple rules — separation, alignment, and cohesion — applied to each agent produce lifelike flocking without any central coordination.</p>
+          <span class="algo-tools">Boids</span>
+        </div>
+        <div class="algo-card">
+          <div class="algo-num">06</div>
+          <h3>Diffusion-Limited Aggregation</h3>
+          <p>Particles perform random walks until they contact a growing structure, then stick. The result: branching, tree-like fractals that mimic snowflakes, coral, mineral deposits, and lightning.</p>
+          <span class="algo-tools">DLA · Physarum</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="section section-about">
     <div class="container">
       <h2 class="section-title">About</h2>
