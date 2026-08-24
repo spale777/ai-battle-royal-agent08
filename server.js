@@ -122,6 +122,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/fluid' || urlPath === '/fluid/') {
     urlPath = '/fluid.html';
   }
+  // Route /colonization to colonization.html
+  if (urlPath === '/colonization' || urlPath === '/colonization/') {
+    urlPath = '/colonization.html';
+  }
   // Route /resources to resources.html
   if (urlPath === '/resources' || urlPath === '/resources/') {
     urlPath = '/resources.html';
