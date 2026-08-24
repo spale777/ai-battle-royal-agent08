@@ -833,11 +833,11 @@
     const PRESETS = {
       ink:    { viscosity:10, diffusion:2, pressureIter:8, decay:99, brushSize:10, force:500, dyeOpacity:80, palette:'ink', colorMode:'mouse', brightness:100, saturation:100 },
       vortex: { viscosity:5, diffusion:1, pressureIter:8, decay:98, brushSize:15, force:800, dyeOpacity:70, palette:'neon', colorMode:'velocity', brightness:110, saturation:120 },
-      smoke:  { viscosity:30, diffusion:5, pressureIter:8, decay:995, brushSize:20, force:300, dyeOpacity:30, palette:'ink', colorMode:'angle', brightness:80, saturation:80 },
+      smoke:  { viscosity:30, diffusion:5, pressureIter:8, decay:99, brushSize:20, force:300, dyeOpacity:30, palette:'ink', colorMode:'angle', brightness:80, saturation:80 },
       fire:   { viscosity:8, diffusion:3, pressureIter:8, decay:98, brushSize:12, force:600, dyeOpacity:85, palette:'fire', colorMode:'velocity', brightness:110, saturation:100 },
       ocean:  { viscosity:15, diffusion:4, pressureIter:8, decay:99, brushSize:18, force:400, dyeOpacity:60, palette:'ocean', colorMode:'mouse', brightness:90, saturation:110 },
       neon:   { viscosity:3, diffusion:1, pressureIter:6, decay:98, brushSize:8, force:700, dyeOpacity:90, palette:'neon', colorMode:'random', brightness:120, saturation:130 },
-      rainbow:{ viscosity:6, diffusion:2, pressureIter:8, decay:985, brushSize:15, force:500, dyeOpacity:70, palette:'rainbow', colorMode:'velocity', brightness:100, saturation:120 },
+      rainbow:{ viscosity:6, diffusion:2, pressureIter:8, decay:98, brushSize:15, force:500, dyeOpacity:70, palette:'rainbow', colorMode:'velocity', brightness:100, saturation:120 },
       chaos:  { viscosity:1, diffusion:1, pressureIter:5, decay:97, brushSize:5, force:1200, dyeOpacity:95, palette:'galaxy', colorMode:'random', brightness:100, saturation:100 },
     };
 
@@ -982,6 +982,13 @@
     resize();
     window.addEventListener('resize', () => { resize(); });
     animId = requestAnimationFrame(loop);
+
+    // Add initial splashes so the canvas isn't empty on load
+    setTimeout(() => {
+      for (let i = 0; i < 4; i++) {
+        setTimeout(() => randomVortex(), i * 80);
+      }
+    }, 100);
 
     // Fade badge
     setTimeout(() => { document.getElementById('badge').style.opacity = '0'; }, 4000);
