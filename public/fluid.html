@@ -355,15 +355,12 @@
     const canvasWrap = document.getElementById('canvas-wrap');
 
     let displayW, displayH;
-    let imageData, buf;
 
     function resize() {
       displayW = canvasWrap.clientWidth;
       displayH = canvasWrap.clientHeight;
       canvas.width = displayW;
       canvas.height = displayH;
-      imageData = ctx.createImageData(displayW, displayH);
-      buf = imageData.data;
     }
 
     // ── Index helper ──────────────────────────────────────────────
@@ -496,49 +493,67 @@
       }
 
       // Advect density
-      const tmpR = new Float32Array(densR0);
-      const tmpG = new Float32Array(densG0);
-      const tmpB = new Float32Array(densB0);
+      const tmpR = new Float32Array(densR);
+      const tmpG = new Float32Array(densG);
+      const tmpB = new Float32Array(densB);
       advect(0, densR, tmpR, u, v, dt);
       advect(0, densG, tmpG, u, v, dt);
       advect(0, densB, tmpB, u, v, dt);
     }
 
     // ── Rendering ─────────────────────────────────────────────────
+    let offCanvas = null;
+    let offCtx = null;
+    let offData = null;
+    
     function render() {
-      const cellW = displayW / N;
-      const cellH = displayH / N;
       const brightMult = CFG.brightness / 100;
       const satMult = CFG.saturation / 100;
 
-      for (let py = 0; py < displayH; py++) {
-        for (let px = 0; px < displayW; px++) {
-          const gx = (px / displayW) * N + 1;
-          const gy = (py / displayH) * N + 1;
-          const gi = Math.min(Math.floor(gx), N);
-          const gj = Math.min(Math.floor(gy), N);
-          const idx = IX(gi, gj);
+      // Create offscreen canvas at fluid grid resolution
+      if (!offCanvas) {
+        offCanvas = document.createElement('canvas');
+        offCanvas.width = N;
+        offCanvas.height = N;
+        offCtx = offCanvas.getContext('2d', { willReadFrequently: false });
+        offData = offCtx.createImageData(N, N);
+      }
+      const d = offData.data;
 
+      // Clear to black
+      for (let i = 0; i < d.length; i += 4) {
+        d[i] = 0; d[i+1] = 0; d[i+2] = 0; d[i+3] = 255;
+      }
+
+      // Write fluid grid
+      for (let j = 1; j <= N; j++) {
+        for (let i = 1; i <= N; i++) {
+          const idx = IX(i, j);
           let r = densR[idx] * 255 * brightMult;
           let g = densG[idx] * 255 * brightMult;
           let b = densB[idx] * 255 * brightMult;
-
-          // Apply saturation
+          if (r < 1 && g < 1 && b < 1) continue;
           if (satMult !== 1) {
-            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-            r = gray + (r - gray) * satMult;
-            g = gray + (g - gray) * satMult;
-            b = gray + (b - gray) * satMult;
+            const gray = 0.299*r + 0.587*g + 0.114*b;
+            r = gray + (r-gray)*satMult;
+            g = gray + (g-gray)*satMult;
+            b = gray + (b-gray)*satMult;
           }
-
-          const pidx = (py * displayW + px) * 4;
-          buf[pidx]     = Math.max(0, Math.min(255, r));
-          buf[pidx + 1] = Math.max(0, Math.min(255, g));
-          buf[pidx + 2] = Math.max(0, Math.min(255, b));
-          buf[pidx + 3] = 255;
+          r = r > 255 ? 255 : r < 0 ? 0 : r;
+          g = g > 255 ? 255 : g < 0 ? 0 : g;
+          b = b > 255 ? 255 : b < 0 ? 0 : b;
+          const pidx = ((j-1)*N + (i-1)) * 4;
+          d[pidx] = r | 0;
+          d[pidx+1] = g | 0;
+          d[pidx+2] = b | 0;
         }
       }
-      ctx.putImageData(imageData, 0, 0);
+
+      offCtx.putImageData(offData, 0, 0);
+      
+      // Scale to display canvas
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(offCanvas, 0, 0, displayW, displayH);
 
       // Optional velocity field visualization
       if (showVelocityField) {
@@ -567,7 +582,6 @@
     let mouseX = 0, mouseY = 0, prevMX = 0, prevMY = 0;
     let mouseDown = false;
     let currentColor = [1, 1, 1];
-    let strokeHue = 0;
 
     function getColorForPosition(x, y, vx, vy) {
       const pal = PALETTES[CFG.palette];
