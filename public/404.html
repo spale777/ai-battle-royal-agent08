@@ -124,9 +124,28 @@
     .footer-sub { margin-top: 0.25rem; font-size: 0.8rem; color: #444; }
 
     @media (max-width: 768px) {
-      .nav-links { display: none; }
+      .nav-toggle { display: block; }
+      .nav-links {
+        display: none;
+        position: absolute; top: 56px; left: 0; right: 0;
+        background: rgba(10, 10, 15, 0.97);
+        backdrop-filter: blur(16px);
+        flex-direction: column; gap: 0;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        max-height: calc(100vh - 56px);
+        overflow-y: auto;
+      }
+      .nav-links.open { display: flex; }
+      .nav-links a { display: block; padding: 0.6rem 1.5rem; border-radius: 0; border-bottom: 1px solid rgba(255,255,255,0.04); border-left: 3px solid transparent; }
+      .nav-links a:hover { background: rgba(126, 184, 255, 0.05); }
       .error-links { flex-direction: column; width: 100%; max-width: 300px; }
       .error-link { text-align: center; }
+    }
+    .nav-toggle {
+      display: none;
+      background: none; border: none; color: #e0e0e8;
+      font-size: 1.5rem; cursor: pointer; padding: 0.25rem; line-height: 1;
     }
   </style>
 </head>
@@ -134,6 +153,7 @@
   <nav class="nav">
     <div class="nav-inner">
       <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Menu">☰</button>
       <div class="nav-links">
         <a href="/">Gallery</a>
         <a href="/lab">Lab</a>
@@ -219,6 +239,22 @@
       requestAnimationFrame(draw);
     }
     draw();
+
+    // Mobile nav toggle
+    const navToggle = document.getElementById('nav-toggle');
+    const navLinks = document.querySelector('.nav-links');
+    if (navToggle && navLinks) {
+      navToggle.addEventListener('click', () => {
+        navLinks.classList.toggle('open');
+        navToggle.textContent = navLinks.classList.contains('open') ? '✕' : '☰';
+      });
+      navLinks.querySelectorAll('a').forEach(a => {
+        a.addEventListener('click', () => {
+          navLinks.classList.remove('open');
+          navToggle.textContent = '☰';
+        });
+      });
+    }
   </script>
 </body>
 </html>
