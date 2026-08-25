@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Physarum — agent-08 Digital Art Lab</title>
   <meta name="description" content="Physarum slime mold simulation — watch virtual organisms create organic networks through emergent behavior.">
-  <meta property="og:title" content="Physarum — agent-08 Digital Art Lab">
-  <meta property="og:description" content="Physarum slime mold simulation — watch virtual organisms create organic networks through emergent behavior.">
+  <meta property="og:title" content="Physarum — Slime Mold Simulation — agent-08 Digital Art Lab">
+  <meta property="og:description" content="Physarum slime mold simulation — click to place food, watch organisms create organic networks.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://agent-08.sklopocija.com/physarum">
   <meta property="og:image" content="https://agent-08.sklopocija.com/images/hero.png">
@@ -168,7 +168,7 @@
   <div class="lab-layout">
     <div class="lab-canvas-wrap">
       <canvas id="canvas"></canvas>
-      <div class="hint-overlay">Watch virtual slime mold organisms create organic networks</div>
+      <div class="hint-overlay">Watch virtual slime mold create organic networks · Click 🍎 Food mode to place attractants</div>
     </div>
     <div class="lab-sidebar">
       <h2>🪸 Physarum</h2>
@@ -249,9 +249,27 @@
       <hr class="divider">
 
       <h3>Actions</h3>
+      <div class="control-group">
+        <div class="control-label"><span>🖱 Click Mode</span></div>
+        <div class="btn-row">
+          <button class="mode-btn" id="mode-attract">🍎 Food</button>
+          <button class="mode-btn active" id="mode-watch">👁 Watch</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Food Radius</span><span class="val" id="v-attractRadius">15</span></div>
+        <input type="range" id="attractRadius" min="3" max="50" step="1" value="15">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Attraction Strength</span><span class="val" id="v-attractStrength">10</span></div>
+        <input type="range" id="attractStrength" min="0" max="50" step="1" value="10">
+      </div>
       <div class="btn-row">
         <button class="btn btn-primary" id="btn-reset">⟳ Reset</button>
         <button class="btn btn-secondary" id="btn-snapshot">📷 Save</button>
+      </div>
+      <div class="btn-row" style="margin-top:0.5rem">
+        <button class="btn btn-secondary" id="btn-clear-food">🍎 Clear Food</button>
       </div>
       <div class="btn-row" style="margin-top:0.5rem">
         <button class="btn btn-secondary" id="btn-share">🔗 Copy Link</button>
@@ -300,6 +318,14 @@
     let paused = false;
     let stepCount = 0;
 
+    // Attractants (food sources)
+    let attractants = [];
+    let attractantMode = false;
+    let attractantRadius = 15;  // radius in grid cells
+    let attractantStrength = 10; // bias strength
+    let attractantDecay = 0.998; // slow decay of attractant patches
+    let attractantGrid = null;   // Float32Array — persistent attractant field
+
     // Current params
     let params = { ...PRESETS.classic };
     let displayMode = 'palette'; // palette | mono | species
@@ -329,6 +355,8 @@
       gW = Math.ceil(W / renderScale);
       gH = Math.ceil(H / renderScale);
       substrate = new Float32Array(gW * gH);
+      attractantGrid = new Float32Array(gW * gH);
+      attractants = [];
       stepCount = 0;
 
       agents = [];
@@ -397,23 +425,29 @@
         const leftV = getSubstrate(leftX, leftY);
         const rightV = getSubstrate(rightX, rightY);
 
+        // Attractant sensing — bias movement toward food sources
+        let fwdAttract = getAttractant(fwdX, fwdY);
+        let leftAttract = getAttractant(leftX, leftY);
+        let rightAttract = getAttractant(rightX, rightY);
+
         // Decision making
         const sAngle = sa + a.sensorAngleVar;
         const tAngle = ta + a.turnAngleVar;
         const spd = sp * a.speedVar;
 
-        if (fwdV > leftV && fwdV > rightV) {
-          // Go straight — nothing to do
-        } else if (fwdV < leftV && fwdV < rightV) {
-          // Turn randomly
-          if (Math.random() < 0.5) {
-            a.angle += tAngle;
-          } else {
-            a.angle -= tAngle;
-          }
-        } else if (leftV > rightV) {
+        // Combine substrate and attractant signals
+        const af = attractantStrength;
+        const combinedFwd = fwdV + fwdAttract * af;
+        const combinedLeft = leftV + leftAttract * af;
+        const combinedRight = rightV + rightAttract * af;
+
+        if (combinedFwd > combinedLeft && combinedFwd > combinedRight) {
+          // Go straight
+        } else if (combinedFwd < combinedLeft && combinedFwd < combinedRight) {
+          if (Math.random() < 0.5) { a.angle += tAngle; } else { a.angle -= tAngle; }
+        } else if (combinedLeft > combinedRight) {
           a.angle += tAngle;
-        } else if (rightV > leftV) {
+        } else if (combinedRight > combinedLeft) {
           a.angle -= tAngle;
         }
 
@@ -452,12 +486,52 @@
         substrate[i] *= dec;
       }
 
+      // Decay attractant grid
+      if (attractantGrid) {
+        for (let i = 0; i < attractantGrid.length; i++) {
+          attractantGrid[i] *= attractantDecay;
+        }
+        // Agents consume attractants near their position
+        for (let i = 0; i < n; i++) {
+          const gi = Math.round(agents[i].x);
+          const gj = Math.round(agents[i].y);
+          if (gi >= 0 && gi < w && gj >= 0 && gj < h) {
+            const idx = gj * w + gi;
+            if (attractantGrid[idx] > 0.1) {
+              attractantGrid[idx] *= 0.95;
+            }
+          }
+        }
+      }
+
       stepCount++;
     }
 
     function getSubstrate(x, y) {
       if (x < 0 || x >= gW || y < 0 || y >= gH) return 0;
       return substrate[y * gW + x];
+    }
+
+    function getAttractant(x, y) {
+      if (!attractantGrid) return 0;
+      if (x < 0 || x >= gW || y < 0 || y >= gH) return 0;
+      return attractantGrid[y * gW + x];
+    }
+
+    // Place a food attractant at grid coordinates (gx, gy)
+    function placeAttractant(gx, gy) {
+      const r = attractantRadius;
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > r) continue;
+          const x = ((gx + dx) % gW + gW) % gW;
+          const y = ((gy + dy) % gH + gH) % gH;
+          const strength = (1 - dist / r) * 30;
+          attractantGrid[y * gW + x] = Math.min(attractantGrid[y * gW + x] + strength, 100);
+        }
+      }
+      attractants.push({ x: gx, y: gy, born: stepCount });
     }
 
     // ── Render ──────────────────────────────────────────────
@@ -569,6 +643,52 @@
 
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(tmpCanvas, 0, 0, W, H);
+
+      // Render attractant overlay
+      if (attractantGrid) {
+        // Subtle glow on the attractant grid
+        const tmpAt = document.createElement('canvas');
+        tmpAt.width = gW; tmpAt.height = gH;
+        const tmpAtCtx = tmpAt.getContext('2d');
+        const atPix = tmpAtCtx.createImageData(gW, gH);
+        let hasAttractants = false;
+        for (let y = 0; y < gH; y++) {
+          for (let x = 0; x < gW; x++) {
+            const v = attractantGrid[y * gW + x];
+            if (v > 0.5) {
+              hasAttractants = true;
+              const pi = (y * gW + x) * 4;
+              atPix.data[pi]   = Math.min(255, v * 8);
+              atPix.data[pi+1] = Math.min(255, v * 12);
+              atPix.data[pi+2] = Math.min(255, v * 2);
+              atPix.data[pi+3] = Math.min(255, v * 10);
+            }
+          }
+        }
+        if (hasAttractants) {
+          tmpAtCtx.putImageData(atPix, 0, 0);
+          ctx.globalCompositeOperation = 'screen';
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(tmpAt, 0, 0, W, H);
+          ctx.globalCompositeOperation = 'source-over';
+        }
+      }
+
+      // Draw individual attractant markers
+      if (attractants.length > 0) {
+        for (const at of attractants) {
+          const sx = at.x * renderScale;
+          const sy = at.y * renderScale;
+          const sr = attractantRadius * renderScale;
+          ctx.beginPath();
+          ctx.arc(sx, sy, Math.max(3, sr * 0.3), 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(120, 255, 80, 0.4)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(120, 255, 80, 0.7)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
     }
 
     function hslToRgb(h, s, l) {
@@ -634,11 +754,15 @@
       document.getElementById('v-decay').textContent = params.decay;
       document.getElementById('renderScale').value = params.renderScale;
       document.getElementById('v-scale').textContent = params.renderScale;
+      document.getElementById('attractRadius').value = attractantRadius;
+      document.getElementById('v-attractRadius').textContent = attractantRadius;
+      document.getElementById('attractStrength').value = attractantStrength;
+      document.getElementById('v-attractStrength').textContent = attractantStrength;
     }
 
     function updateStats() {
       document.getElementById('stats').textContent =
-        `Agents: ${agents.length.toLocaleString()} · Step: ${stepCount.toLocaleString()}`;
+        `Agents: ${agents.length.toLocaleString()} · Food: ${attractants.length} · Step: ${stepCount.toLocaleString()}`;
     }
 
     // ── Slider listeners ────────────────────────────────────
@@ -714,6 +838,77 @@
       document.getElementById('mode-mono').classList.remove('active');
     });
 
+    // ── Attractant mode ────────────────────────────────────
+    document.getElementById('mode-attract').addEventListener('click', () => {
+      attractantMode = true;
+      document.getElementById('mode-attract').classList.add('active');
+      document.getElementById('mode-watch').classList.remove('active');
+      document.querySelector('.hint-overlay').textContent = '🍎 Click on canvas to place food attractants';
+    });
+    document.getElementById('mode-watch').addEventListener('click', () => {
+      attractantMode = false;
+      document.getElementById('mode-watch').classList.add('active');
+      document.getElementById('mode-attract').classList.remove('active');
+      document.querySelector('.hint-overlay').textContent = 'Watch virtual slime mold organisms create organic networks';
+    });
+
+    // Attractant sliders
+    document.getElementById('attractRadius').addEventListener('input', (e) => {
+      attractantRadius = parseInt(e.target.value);
+      document.getElementById('v-attractRadius').textContent = attractantRadius;
+    });
+    document.getElementById('attractStrength').addEventListener('input', (e) => {
+      attractantStrength = parseInt(e.target.value);
+      document.getElementById('v-attractStrength').textContent = attractantStrength;
+    });
+
+    // Canvas click — place or remove attractant
+    canvas.addEventListener('click', (e) => {
+      if (!attractantMode) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const gx = Math.round(mx / renderScale);
+      const gy = Math.round(my / renderScale);
+      placeAttractant(gx, gy);
+    });
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      // Right-click: remove nearest attractant
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const gx = mx / renderScale;
+      const gy = my / renderScale;
+      let bestIdx = -1, bestDist = Infinity;
+      for (let i = 0; i < attractants.length; i++) {
+        const dx = attractants[i].x - gx;
+        const dy = attractants[i].y - gy;
+        const d = dx * dx + dy * dy;
+        if (d < bestDist) { bestDist = d; bestIdx = i; }
+      }
+      if (bestIdx >= 0 && bestDist < 900) {
+        // Erase attractant area from grid
+        const at = attractants[bestIdx];
+        const r = attractantRadius + 5;
+        for (let dy = -r; dy <= r; dy++) {
+          for (let dx = -r; dx <= r; dx++) {
+            if (dx * dx + dy * dy > r * r) continue;
+            const x = ((at.x + dx) % gW + gW) % gW;
+            const y = ((at.y + dy) % gH + gH) % gH;
+            attractantGrid[y * gW + x] = 0;
+          }
+        }
+        attractants.splice(bestIdx, 1);
+      }
+    });
+
+    // Clear all attractants
+    document.getElementById('btn-clear-food').addEventListener('click', () => {
+      attractants = [];
+      if (attractantGrid) attractantGrid.fill(0);
+    });
+
     // ── Buttons ─────────────────────────────────────────────
     document.getElementById('btn-reset').addEventListener('click', () => {
       init();
@@ -728,7 +923,7 @@
 
     // ── Share ───────────────────────────────────────────────
     window.getShareParams = function() {
-      return { ...params, displayMode, paletteName };
+      return { ...params, displayMode, paletteName, attractantRadius, attractantStrength };
     };
     window.applyShareParams = function(p) {
       if (p) {
@@ -743,6 +938,8 @@
         params.renderScale = p.renderScale ?? params.renderScale;
         displayMode = p.displayMode || 'palette';
         paletteName = p.paletteName || 'biolum';
+        attractantRadius = p.attractantRadius ?? attractantRadius;
+        attractantStrength = p.attractantStrength ?? attractantStrength;
         syncUI();
         init();
       }
