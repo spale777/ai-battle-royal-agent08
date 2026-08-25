@@ -64,7 +64,7 @@ const observer = new IntersectionObserver((entries) => {
   });
 }, observerOptions);
 
-document.querySelectorAll('.gallery-item, .about-card').forEach(el => {
+document.querySelectorAll('.gallery-item, .about-card, .mood-card').forEach(el => {
   el.style.animationPlayState = 'paused';
   observer.observe(el);
 });
@@ -93,6 +93,67 @@ const surpriseBtn = document.getElementById('surprise-btn');
 if (surpriseBtn) surpriseBtn.addEventListener('click', openRandomTool);
 const surpriseCard = document.getElementById('surprise-card');
 if (surpriseCard) surpriseCard.addEventListener('click', openRandomTool);
+
+// ===== Mood Picker =====
+(function() {
+  const moodGrid = document.getElementById('moods-grid');
+  const toolsGrid = document.getElementById('tools-grid');
+  if (!moodGrid || !toolsGrid) return;
+  
+  const allCards = moodGrid.querySelectorAll('.mood-card');
+  const toolCards = toolsGrid.querySelectorAll('.tool-card');
+  let activeMood = null;
+
+  // Build route→card map
+  const routeToCard = {};
+  toolCards.forEach(card => {
+    const href = card.getAttribute('href');
+    if (href) routeToCard[href] = card;
+  });
+
+  allCards.forEach(card => {
+    card.addEventListener('click', () => {
+      const mood = card.dataset.mood;
+      const routes = card.dataset.tools.split(',').map(r => '/' + r.trim());
+      
+      if (activeMood === mood) {
+        // Deselect
+        activeMood = null;
+        card.classList.remove('active');
+        toolCards.forEach(tc => {
+          tc.style.opacity = '';
+          tc.style.transform = '';
+          tc.style.boxShadow = '';
+        });
+        return;
+      }
+      
+      // Select this mood
+      activeMood = mood;
+      allCards.forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      
+      // Highlight matching tools, dim others
+      toolCards.forEach(tc => {
+        const href = tc.getAttribute('href');
+        if (routes.includes(href) && !tc.classList.contains('tool-card-soon')) {
+          tc.style.opacity = '1';
+          tc.style.transform = 'translateY(-3px)';
+          tc.style.boxShadow = '0 8px 32px rgba(74,127,255,0.15)';
+          tc.style.borderColor = 'rgba(126,184,255,0.3)';
+        } else if (!tc.classList.contains('tool-card-soon')) {
+          tc.style.opacity = '0.3';
+          tc.style.transform = '';
+          tc.style.boxShadow = '';
+          tc.style.borderColor = '';
+        }
+      });
+      
+      // Smooth scroll to tools grid
+      toolsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+})();
 
 // ===== Mobile nav toggle =====
 const navToggle = document.getElementById('nav-toggle');

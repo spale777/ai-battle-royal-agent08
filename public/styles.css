@@ -209,6 +209,85 @@ img { max-width: 100%; display: block; }
   box-shadow: 0 8px 32px rgba(192, 132, 252, 0.1);
 }
 
+/* ===== Mood Picker ===== */
+.section-moods { padding: 4rem 0 3rem; }
+.moods-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+.mood-card {
+  background: #12121a;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.mood-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.mood-card[data-mood="organic"]::before { background: linear-gradient(135deg, rgba(72,191,86,0.12), rgba(45,160,70,0.06)); }
+.mood-card[data-mood="geometric"]::before { background: linear-gradient(135deg, rgba(100,140,255,0.12), rgba(70,100,220,0.06)); }
+.mood-card[data-mood="chaotic"]::before { background: linear-gradient(135deg, rgba(220,100,60,0.12), rgba(180,60,40,0.06)); }
+.mood-card[data-mood="serene"]::before { background: linear-gradient(135deg, rgba(80,180,220,0.12), rgba(50,140,190,0.06)); }
+.mood-card[data-mood="natural"]::before { background: linear-gradient(135deg, rgba(180,140,80,0.12), rgba(150,110,60,0.06)); }
+.mood-card[data-mood="experimental"]::before { background: linear-gradient(135deg, rgba(180,100,220,0.12), rgba(140,70,180,0.06)); }
+.mood-card:hover {
+  border-color: rgba(255,255,255,0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+}
+.mood-card:hover::before { opacity: 1; }
+.mood-card.active {
+  border-color: rgba(126,184,255,0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(74,127,255,0.15);
+}
+.mood-card.active::before { opacity: 1; }
+.mood-icon { font-size: 1.8rem; margin-bottom: 0.5rem; position: relative; z-index: 1; }
+.mood-card h3 {
+  font-size: 1.05rem; font-weight: 600; margin-bottom: 0.3rem;
+  position: relative; z-index: 1;
+}
+.mood-card p {
+  color: #777; font-size: 0.85rem; line-height: 1.5;
+  margin-bottom: 0.75rem;
+  position: relative; z-index: 1;
+}
+.mood-tools {
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  position: relative; z-index: 1;
+}
+.mood-tools span {
+  font-size: 0.7rem;
+  background: rgba(126,184,255,0.08);
+  color: #7eb8ff;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  transition: all 0.2s;
+}
+.mood-card.active .mood-tools span {
+  background: rgba(126,184,255,0.15);
+}
+@media (max-width: 768px) {
+  .moods-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .moods-grid { grid-template-columns: 1fr; }
+}
+
 /* ===== Sections ===== */
 .section { padding: 5rem 0; }
 .section-title {
@@ -387,6 +466,14 @@ img { max-width: 100%; display: block; }
 .about-card { animation: fadeInUp 0.6s ease both; }
 .about-card:nth-child(2) { animation-delay: 0.1s; }
 .about-card:nth-child(3) { animation-delay: 0.2s; }
+
+.mood-card { animation: fadeInUp 0.5s ease both; }
+.mood-card:nth-child(1) { animation-delay: 0.05s; }
+.mood-card:nth-child(2) { animation-delay: 0.1s; }
+.mood-card:nth-child(3) { animation-delay: 0.15s; }
+.mood-card:nth-child(4) { animation-delay: 0.2s; }
+.mood-card:nth-child(5) { animation-delay: 0.25s; }
+.mood-card:nth-child(6) { animation-delay: 0.3s; }
 
 /* Tool cards: no animation, always visible */
 
