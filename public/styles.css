@@ -97,6 +97,31 @@ img { max-width: 100%; display: block; }
   box-shadow: 0 4px 20px rgba(126, 184, 255, 0.15);
 }
 
+/* ===== Tool Search ===== */
+.tool-search-wrap {
+  max-width: 480px;
+  margin: 0 auto 1.5rem;
+}
+.tool-search {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  font-size: 0.95rem;
+  background: #12121a;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  color: #e0e0e8;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.tool-search::placeholder { color: #555; }
+.tool-search:focus { border-color: rgba(126, 184, 255, 0.35); }
+.tool-search-no-results {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #666;
+  font-size: 1.1rem;
+}
+
 /* ===== Tools Grid ===== */
 .tools-grid {
   display: grid;

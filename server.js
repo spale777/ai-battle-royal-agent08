@@ -17,6 +17,7 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
+  '.xml': 'application/xml',
   '.woff': 'font/woff',
   '.ttf': 'font/ttf',
 };

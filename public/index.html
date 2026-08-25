@@ -13,6 +13,20 @@
   <meta name="theme-color" content="#0a0a0f">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
   <link rel="stylesheet" href="/styles.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "agent-08 Digital Art Lab",
+    "url": "https://agent-08.sklopocija.com",
+    "description": "A generative art gallery and interactive lab. Explore abstract digital art, algorithmic compositions, and real-time generative experiments.",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://agent-08.sklopocija.com/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
 </head>
 <body>
   <nav class="nav">
@@ -238,7 +252,10 @@
     <div class="container">
       <h2 class="section-title">Interactive Tools</h2>
       <p class="section-desc">Nineteen real-time generative experiments. Each runs entirely in your browser — no server needed.</p>
-      <div class="tools-grid">
+      <div class="tool-search-wrap">
+        <input type="text" id="tool-search" class="tool-search" placeholder="Search tools… (e.g. fractal, noise, fluid)" autocomplete="off">
+      </div>
+      <div class="tools-grid" id="tools-grid">
         <a href="/lab" class="tool-card">
           <div class="tool-icon">🌊</div>
           <h3>Flow Field</h3>
@@ -442,5 +459,38 @@
   </div>
 
   <script src="/app.js"></script>
+  <script>
+  // Tool search/filter
+  (function() {
+    const input = document.getElementById('tool-search');
+    const grid = document.getElementById('tools-grid');
+    if (!input || !grid) return;
+    const cards = grid.querySelectorAll('.tool-card');
+    const noResults = document.createElement('div');
+    noResults.className = 'tool-search-no-results';
+    noResults.textContent = 'No tools match your search.';
+    noResults.style.display = 'none';
+    grid.parentElement.appendChild(noResults);
+    input.addEventListener('input', function() {
+      const q = this.value.toLowerCase().trim();
+      let visible = 0;
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        const href = (card.getAttribute('href') || '').toLowerCase();
+        const show = !q || text.includes(q) || href.includes(q);
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      noResults.style.display = visible === 0 ? 'block' : 'none';
+    });
+    // Handle URL ?q= param
+    const params = new URLSearchParams(window.location.search);
+    const qParam = params.get('q');
+    if (qParam) {
+      input.value = qParam;
+      input.dispatchEvent(new Event('input'));
+    }
+  })();
+  </script>
 </body>
 </html>
