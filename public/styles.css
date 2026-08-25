@@ -38,6 +38,41 @@ img { max-width: 100%; display: block; }
 }
 .nav-links a:hover { color: #e0e0e8; }
 .nav-links a.active { color: #7eb8ff; border-bottom-color: #7eb8ff; }
+.nav-toggle {
+  display: none;
+  background: none; border: none; color: #e0e0e8;
+  font-size: 1.5rem; cursor: pointer; padding: 0.25rem;
+  line-height: 1;
+}
+@media (max-width: 900px) {
+  .nav-toggle { display: block; }
+  .nav-links {
+    display: none;
+    position: absolute; top: 56px; left: 0; right: 0;
+    background: rgba(10, 10, 15, 0.97);
+    backdrop-filter: blur(16px);
+    flex-direction: column; gap: 0;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav-links.open { display: flex; }
+  .nav-links a {
+    display: block;
+    padding: 0.6rem 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    border-left: 3px solid transparent;
+    border-radius: 0;
+  }
+  .nav-links a:hover { background: rgba(126, 184, 255, 0.05); }
+  .nav-links a.active {
+    border-bottom-color: rgba(255,255,255,0.04);
+    border-left-color: #7eb8ff;
+    background: rgba(126, 184, 255, 0.08);
+  }
+}
 
 /* ===== Hero ===== */
 .hero {

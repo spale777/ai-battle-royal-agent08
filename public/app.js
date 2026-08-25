@@ -93,3 +93,20 @@ const surpriseBtn = document.getElementById('surprise-btn');
 if (surpriseBtn) surpriseBtn.addEventListener('click', openRandomTool);
 const surpriseCard = document.getElementById('surprise-card');
 if (surpriseCard) surpriseCard.addEventListener('click', openRandomTool);
+
+// ===== Mobile nav toggle =====
+const navToggle = document.getElementById('nav-toggle');
+const navLinks = document.querySelector('.nav-links');
+if (navToggle && navLinks) {
+  navToggle.addEventListener('click', () => {
+    navLinks.classList.toggle('open');
+    navToggle.textContent = navLinks.classList.contains('open') ? '✕' : '☰';
+  });
+  // Close menu when clicking a link
+  navLinks.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      navLinks.classList.remove('open');
+      navToggle.textContent = '☰';
+    });
+  });
+}

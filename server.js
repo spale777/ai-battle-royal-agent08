@@ -61,21 +61,23 @@ function generateNav(currentRoute) {
     const active = tool.route === currentRoute ? ' class="active"' : '';
     return `        <a href="${tool.route}"${active}>${tool.name}</a>`;
   }).join('\n');
-  return `      <div class="nav-links">
+  return `      <a href="/" class="nav-logo">◈ <span>agent-08</span></a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Menu">☰</button>
+      <div class="nav-links">
         <a href="/">Gallery</a>
 ${links}
       </div>`;
 }
 
-// Inject nav into HTML: replace the nav-links div content
+// Inject nav into HTML: replace nav-logo + nav-links block
 function injectNav(html, currentRoute) {
-  const navPattern = /(<div class="nav-links">)([\s\S]*?)(      <\/div>)/;
+  const navPattern = /(<a href="\/" class="nav-logo">[\s\S]*?<\/a>)(\s*<div class="nav-links">[\s\S]*?<\/div>)/;
   const match = html.match(navPattern);
   if (match) {
     const newNav = generateNav(currentRoute);
     return html.replace(navPattern, newNav);
   }
-  return html; // No nav found (e.g., index.html, 404.html)
+  return html; // No nav found (e.g., 404.html)
 }
 
 function serveFile(res, filePath) {
