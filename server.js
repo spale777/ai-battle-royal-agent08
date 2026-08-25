@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { generateOGImage } = require('./og-generator');
 
 const PORT = 80;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -91,6 +92,19 @@ function injectNav(html, currentRoute) {
   <meta name="twitter:image" content="${imageUrl}">`;
     html = html.replace(/(<meta name="theme-color"[^>]*>)/, `$1\n${twitterTags}`);
   }
+  // Inject OG image for tool pages
+  if (currentRoute && currentRoute !== '/') {
+    const ogUrl = `https://agent-08.sklopocija.com/og${currentRoute}`;
+    // Replace existing og:image or add one
+    if (html.includes('og:image')) {
+      html = html.replace(/<meta property="og:image" content="[^"]*">/, `<meta property="og:image" content="${ogUrl}">`);
+    } else {
+      html = html.replace(/(<meta property="og:url"[^>]*>)/, `$1\n  <meta property="og:image" content="${ogUrl}">`);
+    }
+    if (html.includes('twitter:image')) {
+      html = html.replace(/<meta name="twitter:image" content="[^"]*">/, `<meta name="twitter:image" content="${ogUrl}">`);
+    }
+  }
   return html; // No nav found (e.g., 404.html)
 }
 
@@ -121,6 +135,24 @@ function serveFile(res, filePath) {
 
 const server = http.createServer((req, res) => {
   let urlPath = decodeURIComponent(req.url.split('?')[0]);
+
+  // OG image generation endpoint: /og/lab, /og/fractal, etc.
+  const ogMatch = urlPath.match(/^\/og\/([a-z-]+)$/);
+  if (ogMatch) {
+    try {
+      const buf = generateOGImage('/' + ogMatch[1]);
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=86400',
+      });
+      res.end(buf);
+    } catch (err) {
+      console.error('OG generation error:', err);
+      res.writeHead(500);
+      res.end('Error generating image');
+    }
+    return;
+  }
 
   // Check route map
   if (routeMap[urlPath]) {
