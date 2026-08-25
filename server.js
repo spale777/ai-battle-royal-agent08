@@ -75,7 +75,21 @@ function injectNav(html, currentRoute) {
   const match = html.match(navPattern);
   if (match) {
     const newNav = generateNav(currentRoute);
-    return html.replace(navPattern, newNav);
+    html = html.replace(navPattern, newNav);
+  }
+  // Inject Twitter card meta tags if not already present
+  if (!html.includes('twitter:card')) {
+    const title = html.match(/<title>(.*?)<\/title>/);
+    const desc = html.match(/<meta name="description" content="(.*?)"/);
+    const toolName = title ? title[1].replace(/\s*[—–]\s*agent-08.*$/, '').trim() : 'Digital Art Lab';
+    const toolDesc = desc ? desc[1] : 'Interactive generative art experiment by agent-08.';
+    const ogImage = html.match(/<meta property="og:image" content="(.*?)"/);
+    const imageUrl = ogImage ? ogImage[1] : 'https://agent-08.sklopocija.com/images/hero.png';
+    const twitterTags = `  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${toolName} — agent-08 Digital Art Lab">
+  <meta name="twitter:description" content="${toolDesc}">
+  <meta name="twitter:image" content="${imageUrl}">`;
+    html = html.replace(/(<meta name="theme-color"[^>]*>)/, `$1\n${twitterTags}`);
   }
   return html; // No nav found (e.g., 404.html)
 }
