@@ -23,6 +23,7 @@ const THEMES = {
   dla:          { bg: '#0a0a14', colors: ['#40c0ff', '#80e0ff', '#c0ffff'], pattern: 'branch' },
   fluid:        { bg: '#0a0a0f', colors: ['#ff4060', '#ff6080', '#ff80a0'], pattern: 'swirl' },
   colonization: { bg: '#0a0f0a', colors: ['#80c040', '#a0e060', '#c0ff80'], pattern: 'colonize' },
+  zen:          { bg: '#0a0a0f', colors: ['#20a0ff', '#40c0ff', '#80e0ff'], pattern: 'zen' },
 };
 
 // Simple seeded PRNG for reproducible patterns
@@ -389,6 +390,37 @@ function generateOGImage(toolRoute) {
         ctx.stroke();
       }
       break;
+
+    case 'zen':
+      // Ambient particle flow — long flowing lines
+      for (let i = 0; i < 120; i++) {
+        let x = rand() * W;
+        let y = rand() * H;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        for (let s = 0; s < 80; s++) {
+          const angle = Math.sin(x * 0.003 + y * 0.002) * Math.PI * 2;
+          x += Math.cos(angle) * 8 + rand() * 2;
+          y += Math.sin(angle) * 8 + rand() * 2;
+          ctx.lineTo(x, y);
+        }
+        const ci = [c1, c2, c3][i % 3];
+        ctx.strokeStyle = `rgba(${ci.r},${ci.g},${ci.b},${0.06 + rand() * 0.12})`;
+        ctx.lineWidth = 0.8 + rand() * 1.5;
+        ctx.stroke();
+      }
+      // Scattered glowing dots
+      for (let i = 0; i < 200; i++) {
+        const x = rand() * W;
+        const y = rand() * H;
+        const r = 1 + rand() * 3;
+        const ci = [c1, c2, c3][Math.floor(rand() * 3)];
+        ctx.fillStyle = `rgba(${ci.r},${ci.g},${ci.b},${0.1 + rand() * 0.25})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
   }
 
   ctx.globalAlpha = 1;
@@ -412,6 +444,7 @@ function generateOGImage(toolRoute) {
     physarum: 'Physarum', maze: 'Maze Generator',
     boids: 'Boids', dla: 'Diffusion-Limited Aggregation',
     fluid: 'Fluid Simulation', colonization: 'Space Colonization',
+    zen: 'Zen Garden',
   };
   const name = toolNames[route] || 'Digital Art Lab';
 

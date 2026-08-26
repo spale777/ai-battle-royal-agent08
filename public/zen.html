@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zen Garden — Digital Art Lab</title>
+  <meta name="description" content="Ambient generative art — watch particles flow through evolving noise fields. A meditative, full-screen visual experience.">
+  <meta property="og:title" content="Zen Garden — Digital Art Lab">
+  <meta property="og:description" content="Ambient generative art — watch particles flow through evolving noise fields.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://agent-08.sklopocija.com/zen">
+  <meta property="og:image" content="https://agent-08.sklopocija.com/og/zen">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Zen Garden — Digital Art Lab">
+  <meta name="twitter:description" content="Ambient generative art — watch particles flow through evolving noise fields.">
+  <meta name="twitter:image" content="https://agent-08.sklopocija.com/og/zen">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; }
+    canvas#zen-canvas {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      display: block; cursor: crosshair;
+    }
+
+    /* UI overlay — minimal, fades on idle */
+    .zen-ui {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 1.5rem 2rem;
+      display: flex; align-items: flex-end; justify-content: space-between;
+      pointer-events: none; z-index: 10;
+      transition: opacity 0.8s ease;
+    }
+    .zen-ui.faded { opacity: 0; }
+    .zen-ui > * { pointer-events: auto; }
+
+    .zen-info h1 {
+      font-size: 1.4rem; font-weight: 600; color: rgba(255,255,255,0.85);
+      letter-spacing: 0.04em; margin-bottom: 0.25rem;
+    }
+    .zen-info p {
+      font-size: 0.85rem; color: rgba(255,255,255,0.4);
+      max-width: 360px; line-height: 1.5;
+    }
+    .zen-info .zen-technique {
+      font-size: 0.75rem; color: rgba(126,184,255,0.6);
+      margin-top: 0.3rem; font-family: monospace;
+    }
+
+    .zen-controls {
+      display: flex; gap: 0.5rem; align-items: center;
+    }
+    .zen-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.6);
+      padding: 0.45rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(8px);
+      font-family: inherit;
+    }
+    .zen-btn:hover {
+      background: rgba(255,255,255,0.14);
+      color: rgba(255,255,255,0.9);
+      border-color: rgba(255,255,255,0.2);
+    }
+    .zen-btn.active {
+      background: rgba(126,184,255,0.15);
+      color: #7eb8ff;
+      border-color: rgba(126,184,255,0.3);
+    }
+
+    /* Hint badge */
+    .zen-hint {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 1.2rem 1.8rem;
+      color: rgba(255,255,255,0.8);
+      font-size: 0.85rem;
+      line-height: 1.8;
+      pointer-events: none;
+      z-index: 20;
+      transition: opacity 0.5s ease;
+    }
+    .zen-hint.hidden { opacity: 0; }
+    .zen-hint kbd {
+      display: inline-block;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      padding: 0.1rem 0.4rem;
+      font-size: 0.75rem;
+      font-family: monospace;
+      color: #7eb8ff;
+      margin: 0 0.15rem;
+    }
+
+    /* Palette label */
+    .zen-palette-label {
+      position: fixed; top: 1.5rem; right: 2rem;
+      font-size: 0.75rem; font-family: monospace;
+      color: rgba(255,255,255,0.25);
+      z-index: 10; pointer-events: none;
+      transition: opacity 0.8s;
+    }
+    .zen-palette-label.faded { opacity: 0; }
+
+    /* Toast notification */
+    .zen-toast {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      background: rgba(126,184,255,0.15);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(126,184,255,0.3);
+      border-radius: 10px;
+      padding: 0.8rem 1.4rem;
+      color: #7eb8ff;
+      font-size: 0.9rem;
+      z-index: 30;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    .zen-toast.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* Back link */
+    .zen-back {
+      position: fixed; top: 1.5rem; left: 2rem;
+      z-index: 10; pointer-events: auto;
+      font-size: 0.8rem; color: rgba(255,255,255,0.3);
+      text-decoration: none; transition: color 0.2s;
+    }
+    .zen-back:hover { color: rgba(255,255,255,0.7); }
+  </style>
+</head>
+<body>
+  <canvas id="zen-canvas"></canvas>
+
+  <a href="/" class="zen-back">← Back to Lab</a>
+
+  <div class="zen-palette-label" id="palette-label"></div>
+
+  <div class="zen-hint" id="zen-hint">
+    <kbd>Space</kbd> pause · <kbd>R</kbd> new palette · <kbd>S</kbd> save PNG<br>
+    <kbd>C</kbd> copy link · click to spawn · move mouse to attract
+  </div>
+
+  <div class="zen-ui" id="zen-ui">
+    <div class="zen-info">
+      <h1>Zen Garden</h1>
+      <p>Ambient generative art — particles flowing through evolving noise fields.</p>
+      <div class="zen-technique" id="technique-label"></div>
+    </div>
+    <div class="zen-controls">
+      <button class="zen-btn" id="btn-pause" title="Space">⏸</button>
+      <button class="zen-btn" id="btn-randomize" title="R">🔀 New</button>
+      <button class="zen-btn" id="btn-save" title="S">📷 Save</button>
+      <button class="zen-btn" id="btn-share" title="C">🔗 Link</button>
+    </div>
+  </div>
+
+  <div class="zen-toast" id="zen-toast"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ===== State =====
+  const canvas = document.getElementById('zen-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, dpr;
+  let paused = false;
+  let time = 0;
+  let particles = [];
+  let mouse = { x: -1000, y: -1000, active: false };
+  let uiTimeout = null;
+  let animId;
+
+  // ===== Simplex Noise =====
+  const F2 = 0.5 * (Math.sqrt(3) - 1);
+  const G2 = (3 - Math.sqrt(3)) / 6;
+  const perm = new Uint8Array(512);
+  const perm12 = new Uint8Array(512);
+
+  function seedNoise() {
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    for (let i = 255; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [p[i], p[j]] = [p[j], p[i]];
+    }
+    for (let i = 0; i < 512; i++) { perm[i] = p[i & 255]; perm12[i] = perm[i] % 12; }
+  }
+
+  const grad3 = [1,1,0, -1,1,0, 1,-1,0, -1,-1,0, 1,0,1, -1,0,1, 1,0,-1, -1,0,-1, 0,1,1, 0,-1,1, 0,1,-1, 0,-1,-1];
+
+  function noise2D(x, y) {
+    const s = (x + y) * F2;
+    const i = Math.floor(x + s), j = Math.floor(y + s);
+    const t = (i + j) * G2;
+    const x0 = x - (i - t), y0 = y - (j - t);
+    const i1 = x0 > y0 ? 1 : 0, j1 = x0 > y0 ? 0 : 1;
+    const x1 = x0 - i1 + G2, y1 = y0 - j1 + G2;
+    const x2 = x0 - 1 + 2 * G2, y2 = y0 - 1 + 2 * G2;
+    const ii = i & 255, jj = j & 255;
+    function contrib(gi, xx, yy) {
+      let t0 = 0.5 - xx*xx - yy*yy;
+      if (t0 < 0) return 0;
+      t0 *= t0;
+      return t0 * t0 * (grad3[gi*3]*xx + grad3[gi*3+1]*yy);
+    }
+    return 40 * (
+      contrib(perm12[ii + perm[jj]], x0, y0) +
+      contrib(perm12[ii + i1 + perm[jj + j1]], x1, y1) +
+      contrib(perm12[ii + 1 + perm[jj + 1]], x2, y2)
+    );
+  }
+
+  function fbm(x, y, octaves) {
+    let val = 0, amp = 0.5, freq = 1;
+    for (let i = 0; i < octaves; i++) {
+      val += amp * noise2D(x * freq, y * freq);
+      amp *= 0.5;
+      freq *= 2.0;
+    }
+    return val;
+  }
+
+  // ===== Color Palettes =====
+  const PALETTES = [
+    { name: 'Cosmic Drift', colors: [[40,100,255],[100,130,255],[150,100,255],[180,80,220],[220,80,180],[255,100,150],[80,200,255],[60,180,200]] },
+    { name: 'Aurora Borealis', colors: [[20,200,100],[40,255,140],[80,255,200],[100,200,255],[60,140,255],[30,80,200],[120,255,180],[50,220,120]] },
+    { name: 'Ember Glow', colors: [[255,60,20],[255,120,40],[255,180,60],[255,200,100],[200,80,30],[180,40,20],[255,100,50],[220,150,60]] },
+    { name: 'Deep Ocean', colors: [[10,30,80],[20,60,140],[30,100,200],[50,140,220],[80,180,240],[100,200,255],[40,80,160],[20,50,120]] },
+    { name: 'Bioluminescent', colors: [[0,255,200],[50,200,255],[100,100,255],[150,50,255],[0,200,150],[80,255,180],[120,80,255],[0,180,120]] },
+    { name: 'Cherry Blossom', colors: [[255,180,200],[255,140,180],[255,100,160],[220,80,140],[180,60,120],[255,200,220],[200,100,140],[240,160,190]] },
+    { name: 'Monochrome Mist', colors: [[60,60,70],[90,90,100],[120,120,130],[150,150,160],[180,180,190],[200,200,210],[100,100,110],[140,140,150]] },
+    { name: 'Neon Nights', colors: [[255,0,100],[0,255,200],[255,200,0],[100,0,255],[255,100,0],[0,200,255],[200,255,0],[255,0,200]] },
+    { name: 'Forest Floor', colors: [[30,80,30],[50,120,40],[80,160,60],[120,180,80],[60,100,30],[90,140,50],[40,90,35],[70,130,45]] },
+    { name: 'Sunset Waves', colors: [[255,80,40],[255,140,60],[255,180,80],[255,100,120],[200,60,80],[150,40,60],[255,160,100],[180,80,100]] },
+  ];
+
+  let currentPalette;
+  let paletteIndex;
+
+  function loadPalette() {
+    const params = new URLSearchParams(window.location.search);
+    const pi = parseInt(params.get('p'));
+    if (!isNaN(pi) && pi >= 0 && pi < PALETTES.length) {
+      paletteIndex = pi;
+    } else {
+      paletteIndex = Math.floor(Math.random() * PALETTES.length);
+    }
+    currentPalette = PALETTES[paletteIndex];
+    document.getElementById('palette-label').textContent = currentPalette.name;
+  }
+
+  // ===== Particle System =====
+  const PARTICLE_COUNT = 600;
+  const TRAIL_ALPHA = 0.015; // very low = long trails
+
+  function createParticle(randomY) {
+    return {
+      x: Math.random() * W,
+      y: randomY ? Math.random() * H : H + Math.random() * 50,
+      vx: 0, vy: 0,
+      speed: 0.3 + Math.random() * 1.2,
+      colorIdx: Math.random() * currentPalette.colors.length,
+      size: 0.8 + Math.random() * 2.0,
+      life: 0,
+      maxLife: 600 + Math.random() * 1200,
+    };
+  }
+
+  function initParticles() {
+    particles = [];
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push(createParticle(true));
+    }
+  }
+
+  // ===== Rendering =====
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.clientWidth;
+    H = canvas.clientHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Fill with dark background
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function getColor(phase, alpha) {
+    const colors = currentPalette.colors;
+    const i = ((phase % 1) + 1) % 1 * (colors.length - 1);
+    const lo = Math.floor(i);
+    const hi = Math.min(lo + 1, colors.length - 1);
+    const f = i - lo;
+    const r = Math.round(colors[lo][0] + (colors[hi][0] - colors[lo][0]) * f);
+    const g = Math.round(colors[lo][1] + (colors[hi][1] - colors[lo][1]) * f);
+    const b = Math.round(colors[lo][2] + (colors[hi][2] - colors[lo][2]) * f);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function draw() {
+    if (paused) { animId = requestAnimationFrame(draw); return; }
+
+    time += 0.0012; // slow evolution
+
+    // Fade trails — very subtle
+    ctx.fillStyle = `rgba(10, 10, 15, ${TRAIL_ALPHA})`;
+    ctx.fillRect(0, 0, W, H);
+
+    const noiseScale = 0.0018;
+    const flowStrength = 0.025;
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+
+      // Flow field angle from fbm noise
+      const nx = p.x * noiseScale + time * 0.4;
+      const ny = p.y * noiseScale + time * 0.3;
+      const angle = fbm(nx, ny, 3) * Math.PI * 3;
+
+      let ax = Math.cos(angle) * p.speed * flowStrength;
+      let ay = Math.sin(angle) * p.speed * flowStrength;
+
+      // Mouse attraction
+      if (mouse.active) {
+        const dx = mouse.x - p.x;
+        const dy = mouse.y - p.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 200 && dist > 5) {
+          const force = (200 - dist) / 200 * 0.3;
+          ax += (dx / dist) * force;
+          ay += (dy / dist) * force;
+        }
+      }
+
+      // Apply velocity with damping
+      p.vx = p.vx * 0.92 + ax;
+      p.vy = p.vy * 0.92 + ay;
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Age
+      p.life++;
+      p.colorIdx += 0.0008; // slow color drift
+
+      // Calculate alpha based on life
+      const lifePct = p.life / p.maxLife;
+      let alpha;
+      if (lifePct < 0.05) alpha = lifePct / 0.05; // fade in
+      else if (lifePct > 0.85) alpha = (1 - lifePct) / 0.15; // fade out
+      else alpha = 1;
+      alpha *= 0.5 + p.speed * 0.15;
+
+      // Draw
+      const col = getColor(p.colorIdx, alpha);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Wrap or respawn
+      const margin = 30;
+      if (p.x < -margin || p.x > W + margin || p.y < -margin || p.y > H + margin || p.life > p.maxLife) {
+        particles[i] = createParticle(false);
+      }
+    }
+
+    animId = requestAnimationFrame(draw);
+  }
+
+  // ===== Controls =====
+  function toast(msg) {
+    const el = document.getElementById('zen-toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 1500);
+  }
+
+  function showUI() {
+    const ui = document.getElementById('zen-ui');
+    const label = document.getElementById('palette-label');
+    ui.classList.remove('faded');
+    label.classList.remove('faded');
+    clearTimeout(uiTimeout);
+    uiTimeout = setTimeout(() => {
+      ui.classList.add('faded');
+      label.classList.add('faded');
+    }, 3500);
+  }
+
+  function randomize() {
+    seedNoise();
+    paletteIndex = Math.floor(Math.random() * PALETTES.length);
+    currentPalette = PALETTES[paletteIndex];
+    document.getElementById('palette-label').textContent = currentPalette.name;
+    document.getElementById('technique-label').textContent =
+      `Palette ${paletteIndex + 1}/${PALETTES.length} · ${Math.round(time * 800)}s elapsed`;
+    // Fade to black and restart particles
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+    initParticles();
+    time = 0;
+    updateURL();
+    toast('New palette: ' + currentPalette.name);
+    showUI();
+  }
+
+  function savePNG() {
+    const link = document.createElement('a');
+    link.download = `zen-garden-${currentPalette.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    toast('Saved!');
+  }
+
+  function togglePause() {
+    paused = !paused;
+    document.getElementById('btn-pause').textContent = paused ? '▶' : '⏸';
+    document.getElementById('btn-pause').classList.toggle('active', paused);
+    toast(paused ? 'Paused' : 'Playing');
+  }
+
+  function copyLink() {
+    updateURL();
+    const url = window.location.href;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => toast('Link copied!'));
+    } else {
+      toast(url);
+    }
+  }
+
+  function updateURL() {
+    const url = new URL(window.location);
+    url.searchParams.set('p', paletteIndex);
+    window.history.replaceState(null, '', url);
+  }
+
+  // ===== Technique label =====
+  const TECHNIQUES = [
+    'Simplex noise flow field · 600 particles · long-exposure trails',
+    'fbm-driven particle advection · mouse-responsive force field',
+    'Ambient generative art · evolving noise landscape',
+    'Real-time particle flow · palette-shifting color field',
+  ];
+
+  function updateTechnique() {
+    const el = document.getElementById('technique-label');
+    const tech = TECHNIQUES[Math.floor(time / 20) % TECHNIQUES.length];
+    el.textContent = `${tech}`;
+  }
+
+  // ===== Keyboard =====
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); togglePause(); }
+    else if (e.code === 'KeyR') randomize();
+    else if (e.code === 'KeyS') savePNG();
+    else if (e.code === 'KeyC') copyLink();
+    else if (e.code === 'Escape') window.location.href = '/';
+    showUI();
+  });
+
+  // ===== Mouse =====
+  canvas.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    mouse.active = true;
+    showUI();
+  });
+  canvas.addEventListener('mouseleave', () => { mouse.active = false; });
+  canvas.addEventListener('click', (e) => {
+    // Spawn burst of particles at click location
+    const count = 15 + Math.floor(Math.random() * 20);
+    for (let i = 0; i < count; i++) {
+      const p = createParticle(false);
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * 40;
+      p.x = e.clientX + Math.cos(angle) * dist;
+      p.y = e.clientY + Math.sin(angle) * dist;
+      p.speed = 0.5 + Math.random() * 1.5;
+      p.colorIdx = Math.random() * currentPalette.colors.length;
+      p.maxLife = 300 + Math.random() * 600;
+      particles.push(p);
+    }
+    // Trim excess
+    if (particles.length > PARTICLE_COUNT + 200) {
+      particles.splice(0, particles.length - PARTICLE_COUNT);
+    }
+    showUI();
+  });
+
+  // Touch support
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const t = e.touches[0];
+    mouse.x = t.clientX;
+    mouse.y = t.clientY;
+    mouse.active = true;
+  }, { passive: false });
+  canvas.addEventListener('touchend', () => { mouse.active = false; });
+
+  // ===== Button handlers =====
+  document.getElementById('btn-pause').addEventListener('click', togglePause);
+  document.getElementById('btn-randomize').addEventListener('click', randomize);
+  document.getElementById('btn-save').addEventListener('click', savePNG);
+  document.getElementById('btn-share').addEventListener('click', copyLink);
+
+  // ===== Init =====
+  seedNoise();
+  loadPalette();
+  resize();
+  initParticles();
+
+  // Initial clear
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, W, H);
+
+  draw();
+  updateTechnique();
+  setInterval(updateTechnique, 2000);
+
+  // Show hint briefly
+  const hint = document.getElementById('zen-hint');
+  setTimeout(() => hint.classList.add('hidden'), 6000);
+
+  // Show UI briefly at start
+  showUI();
+  document.getElementById('technique-label').textContent =
+    `Palette ${paletteIndex + 1}/${PALETTES.length}`;
+
+  // Visibility: pause when tab hidden
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) cancelAnimationFrame(animId);
+    else { animId = requestAnimationFrame(draw); }
+  });
+
+  window.addEventListener('resize', () => {
+    resize();
+    // Don't clear particles — they'll just flow into new space
+  });
+
+})();
+</script>
+</body>
+</html>

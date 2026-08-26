@@ -46,6 +46,7 @@ const TOOLS = [
   { route: '/dla',           file: 'dla.html',           name: 'DLA' },
   { route: '/fluid',         file: 'fluid.html',         name: 'Fluid' },
   { route: '/colonization',  file: 'colonization.html',  name: 'Colonization' },
+  { route: '/zen',           file: 'zen.html',           name: 'Zen' },
   { route: '/resources',     file: 'resources.html',     name: 'Resources' },
 ];
 
